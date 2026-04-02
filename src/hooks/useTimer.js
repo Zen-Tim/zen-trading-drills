@@ -24,7 +24,7 @@ export function useTimer(token) {
       .catch(() => {})
   }, [token, date])
 
-  // Session timer: tick every second while in a drill
+  // Session timer: tick every second while in a drill section
   const startSession = useCallback(() => {
     if (sessionRef.current) return
     sessionRef.current = setInterval(() => {
@@ -32,16 +32,15 @@ export function useTimer(token) {
     }, 1000)
   }, [])
 
-  const stopSession = useCallback(() => {
+  const pauseSession = useCallback(() => {
     if (sessionRef.current) {
       clearInterval(sessionRef.current)
       sessionRef.current = null
     }
   }, [])
 
-  // Per-item: start timing an item
+  // Per-item: start timing an item (flashcard mode only)
   const startItem = useCallback((itemId) => {
-    // Record time for previous item if any
     if (activeItemId && itemStartRef.current) {
       const elapsed = Math.round((Date.now() - itemStartRef.current) / 1000)
       setItemTimes((prev) => ({
@@ -53,7 +52,7 @@ export function useTimer(token) {
     itemStartRef.current = Date.now()
   }, [activeItemId])
 
-  // Stop timing current item (on mark done or navigate away)
+  // Stop timing current item
   const stopItem = useCallback(() => {
     if (activeItemId && itemStartRef.current) {
       const elapsed = Math.round((Date.now() - itemStartRef.current) / 1000)
@@ -77,7 +76,6 @@ export function useTimer(token) {
 
   // Persist timer data to KV
   const saveTimer = useCallback(() => {
-    // Flush active item time first
     let items = { ...itemTimes }
     if (activeItemId && itemStartRef.current) {
       const elapsed = Math.round((Date.now() - itemStartRef.current) / 1000)
@@ -102,20 +100,18 @@ export function useTimer(token) {
     return () => clearInterval(interval)
   }, [saveTimer])
 
-  // Save on unmount
+  // Clean up on unmount
   useEffect(() => {
     return () => {
-      stopSession()
-      saveTimer()
+      if (sessionRef.current) clearInterval(sessionRef.current)
     }
-  }, [stopSession, saveTimer])
+  }, [])
 
   return {
     sessionSeconds,
     itemTimes,
-    activeItemId,
     startSession,
-    stopSession,
+    pauseSession,
     startItem,
     stopItem,
     getItemElapsed,

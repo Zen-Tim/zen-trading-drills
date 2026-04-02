@@ -10,7 +10,7 @@ import { SessionTimer } from './components/Timer'
 
 const totalItems = drillsData.sections.reduce((sum, s) => sum + s.items.length, 0)
 
-function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBack, onReshuffle, shuffledItems, startItem, stopItem, getItemElapsed, sessionSeconds }) {
+function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBack, onReshuffle, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds }) {
   return (
     <>
       {/* Mode toggle + reshuffle bar */}
@@ -66,8 +66,6 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           markDone={markDone}
           unmarkDone={unmarkDone}
           onBack={onBack}
-          stopItem={stopItem}
-          getItemElapsed={getItemElapsed}
         />
       )}
     </>
@@ -109,6 +107,7 @@ export default function App() {
 
   function leaveSection() {
     timer.stopItem()
+    timer.pauseSession()
     timer.saveTimer()
     setActiveSection(null)
   }
