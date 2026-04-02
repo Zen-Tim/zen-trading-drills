@@ -63,6 +63,11 @@ export default async function handler(req, res) {
       return res.json({ ok: true })
     }
 
+    if (type === 'analytics') {
+      await kv.set(`drills:analytics:${token}`, data)
+      return res.json({ ok: true })
+    }
+
     // Default: progress
     await kv.set(`drills:progress:${token}:${dateStr}`, data)
 
