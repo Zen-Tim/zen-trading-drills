@@ -13,10 +13,12 @@ import { SessionTimer } from './components/Timer'
 const totalItems = drillsData.sections.reduce((sum, s) => sum + s.items.length, 0)
 
 function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBack, onReshuffle, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds }) {
+  const isFlashcard = mode === 'flashcard'
+
   return (
-    <>
+    <div className={isFlashcard ? 'h-dvh flex flex-col bg-white' : 'min-h-dvh bg-white'}>
       {/* Mode toggle + reshuffle bar */}
-      <div className="max-w-lg mx-auto px-4 pt-3 pb-1 flex items-center gap-2 bg-white sticky top-0 z-20">
+      <div className="max-w-lg mx-auto px-4 pt-2 pb-1 flex items-center gap-2 bg-white sticky top-0 z-20">
         <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
           <button
             onClick={() => setMode('flashcard')}
@@ -49,7 +51,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
         </button>
       </div>
 
-      {mode === 'flashcard' ? (
+      {isFlashcard ? (
         <DrillFlashcard
           section={section}
           items={shuffledItems}
@@ -70,7 +72,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           onBack={onBack}
         />
       )}
-    </>
+    </div>
   )
 }
 

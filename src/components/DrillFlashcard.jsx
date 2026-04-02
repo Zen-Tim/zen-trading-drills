@@ -47,12 +47,12 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
   if (!current) return null
 
   return (
-    <div className="min-h-screen bg-white flex flex-col max-w-lg mx-auto">
+    <div className="flex-1 flex flex-col max-w-lg mx-auto w-full">
       {/* Top bar */}
-      <div className="px-4 pt-4 pb-2 flex items-center gap-3">
+      <div className="px-4 pt-1 pb-1 flex items-center gap-2">
         <button
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
+          className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
         >
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -62,32 +62,32 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
           <div className="text-sm font-medium text-gray-900 truncate">{section.icon} {section.title}</div>
         </div>
         <ItemTimer seconds={getItemElapsed(current.id)} />
-        <span className="text-xs text-gray-400 tabular-nums ml-1">{index + 1} / {items.length}</span>
+        <span className="text-xs text-gray-400 tabular-nums ml-1">{index + 1}/{items.length}</span>
       </div>
 
       {/* Progress */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-2">
         <ProgressBar done={doneCount} total={items.length} />
       </div>
 
       {/* Card area */}
       <div
-        className="flex-1 flex items-center justify-center px-6"
+        className="flex-1 flex items-center justify-center px-4 min-h-0"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <div className={`w-full p-8 rounded-3xl border text-center transition-all
+        <div className={`w-full p-5 rounded-2xl border text-center transition-all
           ${currentIsDone ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-100 bg-gray-50/30'}`}
         >
           <p className="text-lg font-medium text-gray-800 leading-relaxed">{current.text}</p>
           {currentIsDone && (
-            <span className="inline-block mt-4 text-xs font-medium text-emerald-500 uppercase tracking-wide">Done</span>
+            <span className="inline-block mt-2 text-xs font-medium text-emerald-500 uppercase tracking-wide">Done</span>
           )}
         </div>
       </div>
 
       {/* Bottom controls */}
-      <div className="px-4 pb-8 pt-4 flex items-center gap-3">
+      <div className="px-4 pb-4 pt-2 flex items-center gap-3">
         <button
           onClick={prev}
           disabled={index === 0}
