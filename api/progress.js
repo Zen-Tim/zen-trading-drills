@@ -32,6 +32,11 @@ export default async function handler(req, res) {
       return res.json(data || { sessionSeconds: 0, items: {} })
     }
 
+    if (type === 'analytics') {
+      const data = await kv.get(`drills:analytics:${token}`)
+      return res.json(data || { sectionCounts: {}, itemLastDrilled: {} })
+    }
+
     // Default: progress
     const data = await kv.get(`drills:progress:${token}:${dateStr}`)
     return res.json(data || {})
@@ -69,6 +74,19 @@ export default async function handler(req, res) {
     }
     heatmap[dateStr] = totalItems
     await kv.set(`drills:heatmap:${token}`, heatmap)
+
+    // Update analytics aggregates
+    const analytics = (await kv.get(`drills:analytics:${token}`)) || { sectionCounts: {}, itemLastDrilled: {} }
+    for (const sectionId in data) {
+      analytics.sectionCounts[sectionId] = (analytics.sectionCounts[sectionId] || 0) + data[sectionId].length
+      for (const itemId of data[sectionId]) {
+        const prev = analytics.itemLastDrilled[itemId]
+        if (!prev || dateStr >= prev) {
+          analytics.itemLastDrilled[itemId] = dateStr
+        }
+      }
+    }
+    await kv.set(`drills:analytics:${token}`, analytics)
 
     // Update streak
     const streak = (await kv.get(`drills:streak:${token}`)) || { current: 0, lastDate: null }

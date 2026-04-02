@@ -35,6 +35,8 @@ export function useProgress() {
   const [progress, setProgress] = useState({})
   const [streak, setStreak] = useState({ current: 0, lastDate: null })
   const [heatmap, setHeatmap] = useState({})
+  const [analytics, setAnalytics] = useState({ sectionCounts: {}, itemLastDrilled: {} })
+  const [timerData, setTimerData] = useState({ sessionSeconds: 0, items: {} })
   const [loading, setLoading] = useState(true)
 
   const date = getToday()
@@ -43,19 +45,25 @@ export function useProgress() {
   useEffect(() => {
     async function load() {
       try {
-        const [progressRes, streakRes, heatmapRes] = await Promise.all([
+        const [progressRes, streakRes, heatmapRes, analyticsRes, timerRes] = await Promise.all([
           fetch(`/api/progress?token=${token}&date=${date}`),
           fetch(`/api/progress?token=${token}&type=streak`),
           fetch(`/api/progress?token=${token}&type=heatmap`),
+          fetch(`/api/progress?token=${token}&type=analytics`),
+          fetch(`/api/progress?token=${token}&type=timer&date=${date}`),
         ])
-        const [progressData, streakData, heatmapData] = await Promise.all([
+        const [progressData, streakData, heatmapData, analyticsData, timerDataRes] = await Promise.all([
           progressRes.json(),
           streakRes.json(),
           heatmapRes.json(),
+          analyticsRes.json(),
+          timerRes.json(),
         ])
         setProgress(progressData)
         setStreak(streakData)
         setHeatmap(heatmapData)
+        setAnalytics(analyticsData)
+        setTimerData(timerDataRes)
       } catch (err) {
         console.error('Failed to load progress:', err)
       } finally {
@@ -141,6 +149,8 @@ export function useProgress() {
     progress,
     streak,
     heatmap,
+    analytics,
+    timerData,
     loading,
     markDone,
     unmarkDone,
