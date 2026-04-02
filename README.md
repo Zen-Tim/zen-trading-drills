@@ -1,4 +1,10 @@
-# Zen Drills v1.3 · 20260402
+# Zen Drills v1.4 · 20260402
+
+## Status: BUILD COMPLETE
+
+All 6 phases built and deployed. App is live and installable as PWA.
+
+---
 
 ## What It Is
 
@@ -23,7 +29,7 @@ A personal daily practice app for PA trading drills. Pick a section, shuffle the
 zen-drills/
   src/
     data/
-      drills.json          # All sections and items
+      drills.json          # All sections and items (145 items, 8 sections)
     components/
       SectionPicker.jsx    # Landing screen with section tiles
       DrillFlashcard.jsx   # One-at-a-time card mode
@@ -36,16 +42,16 @@ zen-drills/
       useProgress.js       # Read/write daily progress to Vercel KV
       useShuffle.js        # Shuffle logic + state
       useTimer.js          # Session and per-item timing
-    App.jsx                # Router between views
-    main.jsx               # Vite entry
+    App.jsx                # Router between views + bottom tab bar
+    main.jsx               # Vite entry + service worker registration
   api/
     progress.js            # Vercel serverless function (KV read/write)
-    backup.js              # Vercel cron: snapshot KV data to repo
+    backup.js              # Vercel cron: daily snapshot of KV data
   public/
     manifest.json          # PWA manifest (name, icons, theme)
-    sw.js                  # Service worker for offline caching
-    icon-192.png           # PWA icon
-    icon-512.png           # PWA icon
+    sw.js                  # Service worker (network-first, app shell caching)
+    icon-192.png           # PWA icon (gray circle, white Z)
+    icon-512.png           # PWA icon (gray circle, white Z)
   index.html
   package.json
   vite.config.js
@@ -61,6 +67,7 @@ Single flat JSON file. Each section has an id, display info, and ordered array o
 
 ```json
 {
+  "migrations": {},
   "sections": [
     {
       "id": "htf",
@@ -76,7 +83,7 @@ Single flat JSON file. Each section has an id, display info, and ordered array o
 }
 ```
 
-Each item gets a stable ID so progress tracking doesn't break when items are reordered or renamed.
+Each item gets a stable ID so progress tracking doesn't break when items are reordered or renamed. The `migrations` field handles ID remapping when items are renamed/merged/deleted.
 
 ---
 
@@ -96,6 +103,12 @@ Value:  { "20260401": 12, "20260402": 8 }   # date -> items drilled count
 
 Key:    drills:timer:{userToken}:{YYYYMMDD}
 Value:  { "sessionSeconds": 1320, "items": { "htf-001": 45, "htf-003": 62 } }
+
+Key:    drills:analytics:{userToken}
+Value:  { section counts, per-item last-drilled dates }
+
+Key:    backup:{YYYYMMDD}
+Value:  { snapshot of all drills:* keys, rolling 30-day retention }
 ```
 
 One serverless API route (`/api/progress`) handles GET and POST.
@@ -114,9 +127,11 @@ Simple, no auth infrastructure, good enough for a single user.
 
 1. Open Claude Code in the repo
 2. Edit `drills.json` (add item, move between sections, reorder)
-3. Review in GitHub Desktop
-4. Push to main
-5. Vercel auto-deploys (~30 seconds)
+3. If renaming/merging/deleting items, add entries to the `migrations` field
+4. Review in GitHub Desktop
+5. Push to main
+6. Vercel auto-deploys (~30 seconds)
+7. On next app load, migrations are applied automatically to progress data
 
 No database migrations, no CMS, no admin panel. The JSON file IS the database.
 
@@ -178,29 +193,39 @@ Open the app on any device. First time generates a sync token. Enter the same to
 
 ## Views
 
-1. **Home** -- Section tiles with today's progress per section, overall progress bar, streak counter, session timer running
+1. **Home** -- Section tiles with today's progress per section, overall progress bar, streak counter, session timer visible when running
 2. **Drill (Flashcard)** -- One item at a time, swipe/tap to advance, mark done button, per-item timer visible
-3. **Drill (Checklist)** -- Full shuffled list, tap items to check off, per-item time logged on completion
-4. **Heatmap** -- GitHub-style calendar grid showing daily drill activity over past 90-180 days, colour intensity by item count
-5. **Analytics** -- Section frequency breakdown, average time per item, neglected items (not drilled in 30+ days), day-of-week patterns, trends over time
-6. Toggle between flashcard/checklist modes within a section. Shuffle/reshuffle button available in both.
+3. **Drill (Checklist)** -- Full shuffled list, tap items to check off (no per-item timing in this mode)
+4. **Heatmap** -- GitHub-style calendar grid showing daily drill activity over past ~180 days, colour intensity by item count
+5. **Analytics** -- Section frequency breakdown, average time per item, neglected items (not drilled in 30+ days), day-of-week patterns, 30-day trend
+6. **Bottom nav** -- Fixed tab bar: Drills (home), Activity (heatmap), Analytics. Hidden during drill sessions.
+7. Toggle between flashcard/checklist modes within a section. Shuffle/reshuffle button available in both.
+
+---
+
+## Timer Behaviour
+
+- **Session timer:** Starts automatically when entering any drill section. Pauses when navigating back to home. Resumes when entering another section. Accumulates total time across all sections for the day. Resets at midnight.
+- **Per-item timer:** Flashcard/card mode only. Starts when card appears, stops on mark done or advance. No per-item timing in checklist/list mode.
+- **No idle timeout, no auto-pause.** User controls it by navigating back to home.
+- Auto-saves to KV every 30 seconds + on unmount.
 
 ---
 
 ## Decisions Locked
 
-1. **Design:** Clean minimal light theme
-2. **PWA:** Yes -- installable on phone home screen, offline-capable via service worker
+1. **Design:** Clean minimal light theme, mobile-first
+2. **PWA:** Yes -- installable on phone home screen, network-first service worker
 3. **Item data:** Text only, no metadata
-4. **Timer:** Both -- session timer (total time drilling today) and per-item stopwatch (time spent on each item)
+4. **Timer:** Session timer (auto on section enter/leave) + per-item stopwatch (card mode only)
 5. **History:** GitHub-style calendar heatmap showing drill activity by day
-6. **Analytics:** Full dashboard -- section frequency, per-item time patterns, neglected items, trends over time
+6. **Analytics:** Full dashboard -- section frequency, per-item time patterns, neglected items, day-of-week, trends
 7. **Drill lifecycle:** Items never retire -- repetition is the point
 8. **Day reset:** Midnight local time (automatic)
 9. **Offline:** Online-only (simple, may lose progress if no connection)
 10. **Multi-device conflicts:** Last write wins (one person, mostly phone)
-11. **Editing drills:** When items are renamed/merged/deleted, progress history migrates automatically to new IDs
-12. **Backup:** Automatic -- daily snapshot of KV progress data committed to repo via Vercel cron job
+11. **Editing drills:** When items are renamed/merged/deleted, progress history migrates automatically via migrations field in drills.json
+12. **Backup:** Automatic daily snapshot via Vercel cron (06:00 UTC), rolling 30-day retention
 
 ---
 
@@ -212,3 +237,4 @@ Open the app on any device. First time generates a sync token. Enter the same to
 | v1.1 | 20260402 | Locked all decisions: light theme, PWA, text-only items, no timer, heatmap history. Added PWA files and Heatmap component to structure. Added heatmap KV key. |
 | v1.2 | 20260402 | Reshaped as project README. Added full setup guide with Vercel KV step-by-step. |
 | v1.3 | 20260402 | Added session + per-item timer, full analytics dashboard, automatic backup via cron, ID migration on drill edits, midnight reset, last-write-wins sync. Updated repo structure, KV schema, views. |
+| v1.4 | 20260402 | BUILD COMPLETE. All 6 phases deployed. Timer fix: session timer pauses on home (not stops), per-item timer card mode only, no idle timeout. Compacted flashcard view for mobile. Added Timer Behaviour section. Updated decisions and views to reflect final state. |
