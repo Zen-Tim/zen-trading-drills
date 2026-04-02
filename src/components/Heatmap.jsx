@@ -24,7 +24,7 @@ function getColor(count, max) {
   return '#216e39'
 }
 
-export default function Heatmap({ heatmap, onBack }) {
+export default function Heatmap({ heatmap }) {
   const [tooltip, setTooltip] = useState(null)
 
   const { grid, monthLabels, maxCount, totalDays, totalItems } = useMemo(() => {
@@ -75,21 +75,11 @@ export default function Heatmap({ heatmap, onBack }) {
   const svgHeight = TOP_PAD + 7 * CELL_STEP
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-6 pb-12 max-w-lg mx-auto">
+    <div className="min-h-screen bg-white px-4 pt-6 pb-4 max-w-lg mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 active:bg-gray-100"
-        >
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Activity</h1>
-          <p className="text-xs text-gray-400">Past {WEEKS * 7} days</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-gray-900">Activity</h1>
+        <p className="text-xs text-gray-400 mt-1">Past {WEEKS * 7} days</p>
       </div>
 
       {/* Stats */}

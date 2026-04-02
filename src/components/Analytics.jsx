@@ -23,7 +23,7 @@ function Bar({ label, value, max, color = 'bg-emerald-400' }) {
   )
 }
 
-export default function Analytics({ sections, heatmap, analytics, timerData, onBack }) {
+export default function Analytics({ sections, heatmap, analytics, timerData }) {
   const { sectionFreq, maxSectionFreq } = useMemo(() => {
     const counts = analytics.sectionCounts || {}
     const freq = sections.map((s) => ({
@@ -97,17 +97,9 @@ export default function Analytics({ sections, heatmap, analytics, timerData, onB
   }, [heatmap])
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-6 pb-12 max-w-lg mx-auto">
+    <div className="min-h-screen bg-white px-4 pt-6 pb-4 max-w-lg mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 active:bg-gray-100"
-        >
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+      <div className="mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Analytics</h1>
       </div>
 

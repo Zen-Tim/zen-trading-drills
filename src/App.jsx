@@ -20,7 +20,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
         <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
           <button
             onClick={() => setMode('flashcard')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`px-4 py-2 min-h-[36px] rounded-md transition-all ${
               mode === 'flashcard' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
             }`}
           >
@@ -28,7 +28,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           </button>
           <button
             onClick={() => setMode('checklist')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`px-4 py-2 min-h-[36px] rounded-md transition-all ${
               mode === 'checklist' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
             }`}
           >
@@ -40,7 +40,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
 
         <button
           onClick={onReshuffle}
-          className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 active:bg-gray-100"
+          className="ml-auto w-11 h-11 flex items-center justify-center rounded-lg hover:bg-gray-50 active:bg-gray-100"
           title="Reshuffle"
         >
           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,13 +117,13 @@ function BottomNav({ view, onNavigate }) {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="max-w-lg mx-auto flex">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onNavigate(tab.id)}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 pt-2.5 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-0.5 min-h-[48px] py-2.5 transition-colors ${
               view === tab.id ? 'text-gray-900' : 'text-gray-400'
             }`}
           >
@@ -181,7 +181,7 @@ export default function App() {
 
   return (
     <>
-      <div className="pb-16">
+      <div className="pb-20">
         {view === 'home' && (
           <SectionPicker
             sections={drillsData.sections}
@@ -194,10 +194,7 @@ export default function App() {
           />
         )}
         {view === 'heatmap' && (
-          <Heatmap
-            heatmap={heatmap}
-            onBack={() => setView('home')}
-          />
+          <Heatmap heatmap={heatmap} />
         )}
         {view === 'analytics' && (
           <Analytics
@@ -205,7 +202,6 @@ export default function App() {
             heatmap={heatmap}
             analytics={analytics}
             timerData={timerData}
-            onBack={() => setView('home')}
           />
         )}
       </div>
