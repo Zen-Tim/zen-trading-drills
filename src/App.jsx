@@ -2,13 +2,15 @@ import { useState } from 'react'
 import drillsData from './data/drills.json'
 import { useProgress } from './hooks/useProgress'
 import { useShuffle } from './hooks/useShuffle'
+import { useTimer } from './hooks/useTimer'
 import SectionPicker from './components/SectionPicker'
 import DrillFlashcard from './components/DrillFlashcard'
 import DrillChecklist from './components/DrillChecklist'
+import { SessionTimer } from './components/Timer'
 
 const totalItems = drillsData.sections.reduce((sum, s) => sum + s.items.length, 0)
 
-function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBack, onReshuffle, shuffledItems }) {
+function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBack, onReshuffle, shuffledItems, startItem, stopItem, getItemElapsed, sessionSeconds }) {
   return (
     <>
       {/* Mode toggle + reshuffle bar */}
@@ -32,6 +34,8 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           </button>
         </div>
 
+        <SessionTimer seconds={sessionSeconds} />
+
         <button
           onClick={onReshuffle}
           className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 active:bg-gray-100"
@@ -50,6 +54,9 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           isDone={isDone}
           markDone={markDone}
           onBack={onBack}
+          startItem={startItem}
+          stopItem={stopItem}
+          getItemElapsed={getItemElapsed}
         />
       ) : (
         <DrillChecklist
@@ -59,13 +66,15 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           markDone={markDone}
           unmarkDone={unmarkDone}
           onBack={onBack}
+          stopItem={stopItem}
+          getItemElapsed={getItemElapsed}
         />
       )}
     </>
   )
 }
 
-function DrillSession({ section, isDone, markDone, unmarkDone, onBack }) {
+function DrillSession({ section, isDone, markDone, unmarkDone, onBack, startItem, stopItem, getItemElapsed, sessionSeconds }) {
   const [mode, setMode] = useState('flashcard')
   const { shuffled, reshuffle } = useShuffle(section.items)
 
@@ -80,13 +89,29 @@ function DrillSession({ section, isDone, markDone, unmarkDone, onBack }) {
       onBack={onBack}
       onReshuffle={reshuffle}
       shuffledItems={shuffled}
+      startItem={startItem}
+      stopItem={stopItem}
+      getItemElapsed={getItemElapsed}
+      sessionSeconds={sessionSeconds}
     />
   )
 }
 
 export default function App() {
-  const { sectionProgress, totalDone, streak, loading, isDone, markDone, unmarkDone } = useProgress()
+  const { token, sectionProgress, totalDone, streak, loading, isDone, markDone, unmarkDone } = useProgress()
+  const timer = useTimer(token)
   const [activeSection, setActiveSection] = useState(null)
+
+  function enterSection(section) {
+    timer.startSession()
+    setActiveSection(section)
+  }
+
+  function leaveSection() {
+    timer.stopItem()
+    timer.saveTimer()
+    setActiveSection(null)
+  }
 
   if (loading) {
     return (
@@ -104,7 +129,11 @@ export default function App() {
         isDone={isDone}
         markDone={markDone}
         unmarkDone={unmarkDone}
-        onBack={() => setActiveSection(null)}
+        onBack={leaveSection}
+        startItem={timer.startItem}
+        stopItem={timer.stopItem}
+        getItemElapsed={timer.getItemElapsed}
+        sessionSeconds={timer.sessionSeconds}
       />
     )
   }
@@ -116,7 +145,8 @@ export default function App() {
       totalDone={totalDone}
       totalItems={totalItems}
       streak={streak}
-      onSelectSection={setActiveSection}
+      onSelectSection={enterSection}
+      sessionSeconds={timer.sessionSeconds}
     />
   )
 }

@@ -1,13 +1,26 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ProgressBar from './ProgressBar'
+import { ItemTimer } from './Timer'
 
-export default function DrillFlashcard({ section, items, isDone, markDone, onBack }) {
+export default function DrillFlashcard({ section, items, isDone, markDone, onBack, startItem, stopItem, getItemElapsed }) {
   const [index, setIndex] = useState(0)
+  const [, setTick] = useState(0)
   const touchStart = useRef(null)
 
   const current = items[index]
   const doneCount = items.filter((item) => isDone(section.id, item.id)).length
   const currentIsDone = current ? isDone(section.id, current.id) : false
+
+  // Start timer for current item
+  useEffect(() => {
+    if (current) startItem(current.id)
+  }, [current, startItem])
+
+  // Tick every second to update displayed item time
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   function next() {
     if (index < items.length - 1) setIndex(index + 1)
@@ -38,7 +51,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
       {/* Top bar */}
       <div className="px-4 pt-4 pb-2 flex items-center gap-3">
         <button
-          onClick={onBack}
+          onClick={() => { stopItem(); onBack() }}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
         >
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,7 +61,8 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-gray-900 truncate">{section.icon} {section.title}</div>
         </div>
-        <span className="text-xs text-gray-400 tabular-nums">{index + 1} / {items.length}</span>
+        <ItemTimer seconds={getItemElapsed(current.id)} />
+        <span className="text-xs text-gray-400 tabular-nums ml-1">{index + 1} / {items.length}</span>
       </div>
 
       {/* Progress */}
@@ -87,6 +101,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
         <button
           onClick={() => {
             if (!currentIsDone) markDone(section.id, current.id)
+            stopItem()
             next()
           }}
           className={`flex-1 h-12 rounded-full font-medium text-sm transition-all active:scale-[0.97]

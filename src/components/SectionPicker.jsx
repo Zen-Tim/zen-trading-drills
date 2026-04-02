@@ -1,6 +1,7 @@
 import ProgressBar from './ProgressBar'
+import { SessionTimer } from './Timer'
 
-export default function SectionPicker({ sections, sectionProgress, totalDone, totalItems, streak, onSelectSection }) {
+export default function SectionPicker({ sections, sectionProgress, totalDone, totalItems, streak, onSelectSection, sessionSeconds }) {
   return (
     <div className="min-h-screen bg-white px-4 pt-6 pb-12 max-w-lg mx-auto">
       {/* Header */}
@@ -9,13 +10,21 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
         <p className="text-sm text-gray-400 mt-1">Daily PA practice</p>
       </div>
 
-      {/* Streak */}
-      {streak.current > 0 && (
-        <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
-          <span className="text-orange-400 text-lg">🔥</span>
-          <span>{streak.current} day streak</span>
-        </div>
-      )}
+      {/* Streak + Session timer */}
+      <div className="mb-6 flex items-center gap-3 text-sm text-gray-500">
+        {streak.current > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-orange-400 text-lg">🔥</span>
+            <span>{streak.current} day streak</span>
+          </div>
+        )}
+        {sessionSeconds > 0 && (
+          <div className="flex items-center gap-1.5 ml-auto">
+            <span className="text-gray-300">⏱</span>
+            <SessionTimer seconds={sessionSeconds} />
+          </div>
+        )}
+      </div>
 
       {/* Overall progress */}
       <div className="mb-8">
