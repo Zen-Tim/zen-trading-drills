@@ -87,7 +87,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
         <p className="text-lg font-medium text-gray-800 mb-4">All items drilled!</p>
         <button
           onClick={onNewRound}
-          className="px-6 h-12 rounded-full bg-gray-900 text-white font-medium text-sm active:scale-[0.97] transition-all"
+          className="w-full max-w-xs h-14 rounded-full bg-gray-900 text-white font-medium text-base active:scale-[0.97] transition-all"
         >
           New Round
         </button>
@@ -103,14 +103,14 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
       <div className="px-4 pt-1 pb-1 flex items-center gap-2">
         <button
           onClick={onBack}
-          className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
+          className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
         >
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-gray-900 truncate">{section.icon} {section.title}</div>
+          <div className="text-base font-medium text-gray-900 truncate">{section.icon} {section.title}</div>
         </div>
         <ItemTimer seconds={getItemElapsed(current.id)} />
         <span className="text-xs text-gray-400 tabular-nums ml-1">{index + 1}/{items.length}</span>
@@ -169,11 +169,12 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
         <button
           onClick={prev}
           disabled={index === 0}
-          className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-100 disabled:opacity-30 active:bg-gray-50"
+          className="min-w-[56px] h-14 flex items-center justify-center gap-1 rounded-full border border-gray-100 disabled:opacity-30 active:bg-gray-50 px-3"
         >
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
+          <span className="text-sm text-gray-500">Prev</span>
         </button>
 
         {allDone ? (
@@ -183,7 +184,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
               onNewRound()
               setIndex(0)
             }}
-            className="flex-1 h-12 rounded-full font-medium text-sm transition-all active:scale-[0.97] bg-gray-900 text-white"
+            className="flex-1 h-14 rounded-full font-medium text-base transition-all active:scale-[0.97] bg-gray-900 text-white"
           >
             New Round
           </button>
@@ -198,7 +199,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
                 next()
               }
             }}
-            className={`flex-1 h-12 rounded-full font-medium text-sm transition-all active:scale-[0.97]
+            className={`flex-1 h-14 rounded-full font-medium text-base transition-all active:scale-[0.97]
               ${currentIsDone
                 ? 'bg-gray-100 text-gray-500'
                 : 'bg-gray-900 text-white'
@@ -211,8 +212,9 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
         <button
           onClick={next}
           disabled={index === items.length - 1}
-          className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-100 disabled:opacity-30 active:bg-gray-50"
+          className="min-w-[56px] h-14 flex items-center justify-center gap-1 rounded-full border border-gray-100 disabled:opacity-30 active:bg-gray-50 px-3"
         >
+          <span className="text-sm text-gray-500">Next</span>
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>

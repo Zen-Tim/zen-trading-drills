@@ -1,104 +1,31 @@
-# Zen Drills - Claude Code Build Prompts v2.0 - 20260403
+# Zen Drills - Claude Code Build Prompts v2.2 - 20260403
 
 Paste these into Claude Code one at a time. Wait for each phase to complete, review in GitHub Desktop, push, confirm Vercel deploy works, then move to the next phase.
 
-Before starting: the README.md has been updated to v1.5 with the multi-rep spec.
+The README.md is the single source of truth for the project spec.
 
 ---
 
-## Phase 7 -- Multi-Rep Data Model
+## Status
 
-```
-Read the README.md in this repo. It contains the full project spec (Zen Drills v1.5).
-
-This phase: change the progress data model from binary (done/not done) to count-based (number of reps per item). No UI changes yet -- just the data layer.
-
-1. Update useProgress.js:
-   - Change the internal data structure from arrays to count maps. Old format: { "htf": ["htf-001", "htf-003"] }. New format: { "htf": { "htf-001": 2, "htf-003": 1 } }
-   - Add auto-migration: when loading data, detect the old array format and convert it. Each ID in the array becomes count 1. Write the converted format back to KV immediately so migration only happens once.
-   - Add an incrementRep(sectionId, itemId) function that increments the count for an item (or sets it to 1 if not present).
-   - The existing markDone function should now call incrementRep internally (first completion = count 1).
-   - Add a getRepCount(sectionId, itemId) function that returns the current count (0 if not drilled).
-   - Add a getUniqueCount(sectionId) function that returns how many distinct items have count >= 1.
-   - Update the heatmap count to use total reps (sum of all counts across all sections) not unique items.
-
-2. Update api/progress.js:
-   - The serverless function should accept the new count map format on POST.
-   - On GET, return whatever format is stored (the hook handles migration).
-   - No other changes needed -- it's just storing/retrieving JSON.
-
-3. Do NOT change any UI components yet. The existing UI should still work because markDone still exists -- it just writes counts internally now. Progress display might temporarily show wrong numbers if it was reading array lengths -- that's fine, we'll fix in the next phase.
-
-Test: after this phase, the app should still work. Drilling an item should write a count map to KV. Refreshing should load it back correctly. If there was old array-format data in KV, it should auto-migrate on first load.
-```
-
-**After:** push and deploy. Open the app, drill a few items, check Vercel KV in the dashboard to confirm the new count map format is being written.
-
----
-
-## Phase 8 -- Multi-Rep UI
-
-```
-Read the README.md in this repo (Zen Drills v1.5).
-
-This phase: add the multi-rep UI elements. The data layer (count maps, incrementRep) already works from Phase 7.
-
-1. DrillFlashcard.jsx -- "Drill Again" button:
-   - After marking an item done, show a small secondary "Again" button. It should appear with a subtle fade-in, stay visible for about 3 seconds, then fade out.
-   - While visible, tapping "Again" calls incrementRep for that item, shows a brief "+1" animation or count update, and keeps the item in the queue for another pass later in the shuffle.
-   - If the user advances to the next card (swipe/tap), the Again button disappears. Normal flow is uninterrupted -- Again is opt-in.
-   - If an item has been drilled more than once, show a small rep count badge (e.g. "x2") in the corner of the card.
-
-2. DrillChecklist.jsx -- Rep count on completed items:
-   - Completed items show a small count badge on the right side (e.g. "x2", "x3"). Items done once show no badge (x1 is implied by the checkmark).
-   - Tapping a completed item increments its rep count (does NOT uncheck it). The badge updates immediately.
-   - Visual: the badge should be subtle -- small, muted colour, doesn't compete with the checklist flow.
-
-3. "New Round" button:
-   - When all items in the current shuffle are completed, show a "New Round" button prominently (this replaces the "all done" state). Tapping it reshuffles all items and resets their visual state to unchecked for this round. Rep counts carry over -- items done in round 1 still have their counts, and doing them again in round 2 increments further.
-   - Also make "New Round" available in the section header/menu at any time, not just when all items are done. This lets the user start a fresh round even if they skipped some items.
-
-4. SectionPicker.jsx -- Progress display:
-   - Section tiles should show unique items done / total items (not total reps). Use getUniqueCount. "12/17 items" means 12 distinct items done at least once today.
-   - If total reps > unique items (meaning some items were drilled multiple times), show a small secondary indicator like "24 reps" below the main progress. Keep it subtle.
-
-5. Update the overall progress bar on the home screen to use unique items done / total items across all sections.
-
-Design: all multi-rep elements should be visually secondary to the main drill flow. The primary experience (mark done, advance) should feel exactly the same as before. Multi-rep is an opt-in layer on top.
-```
-
-**After:** push and deploy. Test on phone: drill items, use Again, start a new round, verify counts persist.
-
----
-
-## Phase 9 -- Session Resume
-
-```
-Read the README.md in this repo (Zen Drills v1.5).
-
-This phase: when the user closes and reopens the app mid-session, resume where they left off instead of dumping them back to the home screen.
-
-1. Save session state to localStorage whenever it changes:
-   - Which section is currently active (sectionId)
-   - Which mode (flashcard or checklist)
-   - Current position in the shuffle (index)
-   - The shuffle order itself (so items don't reshuffle on reopen)
-   - Which items are marked done in this round
-
-2. On app load, check for saved session state:
-   - If there's an active session from today (check the date), show a "Resume" prompt on the home screen: "Continue [Section Name]? 8/17 done" with Resume and Start Fresh buttons.
-   - If the session is from a previous day, discard it silently (day has reset).
-   - If there's no saved session, show the normal home screen.
-
-3. Clear the saved session state when:
-   - The user completes all items and doesn't start a new round
-   - The user explicitly navigates back to the home screen (back button)
-   - The day rolls past midnight
-
-Keep it lightweight -- localStorage only, no KV writes for session state. This is purely a convenience feature for the single device you're actively using.
-```
-
-**After:** push and deploy. Test: open app, drill half a section, close the app (or switch to another app), reopen -- should offer to resume.
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 | Scaffold | Done |
+| 1 | Data Layer | Done |
+| 2 | Core UI | Done |
+| 3 | Timer | Done |
+| 4 | Heatmap + Analytics | Done |
+| 5 | PWA + Polish | Done |
+| 6 | Backup + Migration | Done |
+| -- | Hotfix: Kill Random Tokens | Done |
+| 7 | Multi-Rep Data Model | Done |
+| 8 | Multi-Rep UI | Done |
+| 9 | Session Resume | Done |
+| 10 | Haptic Feedback + Micro-Interactions | Next |
+| 11 | Focus Mode | Queued |
+| 12 | Basic Tests | Queued |
+| 13 | CI Pipeline | Queued |
+| 14 | Error Tracking (Sentry) | Queued |
 
 ---
 
@@ -171,7 +98,7 @@ Design: Focus mode is a lens across all sections, not a new section. It doesn't 
 
 ---
 
-## Phase 12 -- Pro Upgrade: Basic Tests
+## Phase 12 -- Basic Tests
 
 ```
 Read the README.md in this repo (Zen Drills v1.5).
@@ -220,7 +147,7 @@ Keep tests simple and focused. No snapshot tests, no complex mocks. These should
 
 ---
 
-## Phase 13 -- Pro Upgrade: CI Pipeline
+## Phase 13 -- CI Pipeline
 
 ```
 Read the README.md in this repo (Zen Drills v1.5).
@@ -261,7 +188,7 @@ The pipeline should complete in under 2 minutes. No deployment step -- Vercel ha
 
 ---
 
-## Phase 14 -- Pro Upgrade: Error Tracking
+## Phase 14 -- Error Tracking (Sentry)
 
 ```
 Read the README.md in this repo (Zen Drills v1.5).
@@ -301,11 +228,58 @@ This is fire-and-forget setup. Once it's in, every unhandled error in production
 
 ## Notes
 
-- Phases 7-8 are the multi-rep feature (do these together, they're one logical unit)
-- Phases 9-11 are functional polish (each is independent, do in any order)
+- Phases 10-11 are functional polish (each is independent, do in any order)
 - Phases 12-14 are professional upgrades (do 12 before 13, as CI runs the tests from 12)
-- Each phase is still a standalone deployable increment
+- Each phase is a standalone deployable increment
 - Always push and deploy-test between phases
+
+---
+
+## Completed Work (Archive)
+
+### Phase 0 -- Scaffold (Done 20260402)
+
+Initialised Vite + React, installed Tailwind, created folder structure from spec. Hello world deployed to Vercel.
+
+### Phase 1 -- Data Layer (Done 20260402)
+
+Created drills.json (145 items, 8 sections), api/progress.js serverless function with Vercel KV, useProgress.js hook with token management, useShuffle.js.
+
+### Phase 2 -- Core UI (Done 20260402)
+
+Built SectionPicker, DrillFlashcard, DrillChecklist, ProgressBar. State-based routing in App.jsx. Light minimal theme, mobile-first. Usable drill app.
+
+### Phase 3 -- Timer (Done 20260402)
+
+Session timer (pauses on home, resumes on section enter) + per-item stopwatch (flashcard mode only). Timer data written to KV.
+
+### Phase 4 -- Heatmap + Analytics (Done 20260402)
+
+GitHub-style calendar heatmap (180 days). Analytics dashboard: section frequency, average time per item, neglected items, day-of-week patterns, 30-day trend.
+
+### Phase 5 -- PWA + Polish (Done 20260402)
+
+manifest.json, service worker (network-first), app icons (gray circle, white Z), meta tags, mobile touch target pass. Installable via Add to Home Screen.
+
+### Phase 6 -- Backup + Migration (Done 20260402)
+
+api/backup.js Vercel cron (daily 06:00 UTC, rolling 30-day retention). ID migration via migrations field in drills.json, auto-applied on load.
+
+### Hotfix -- Kill Random Tokens (Done 20260403)
+
+Hardcoded user token to `zen-tim`. Deleted generateToken(), removed token UI. Every device/refresh/reinstall hits the same KV keys.
+
+### Phase 7 -- Multi-Rep Data Model (Done 20260403)
+
+Progress data model changed from arrays to count maps. Added incrementRep, getRepCount, getUniqueCount. Auto-migration from v1.4 array format on first load.
+
+### Phase 8 -- Multi-Rep UI (Done 20260403)
+
+"Again" button in flashcard mode (3-second fade, +1 animation). Rep count badges on completed items in both modes. Tapping completed checklist items increments reps. "New Round" button reshuffles all items. Section tiles show unique coverage with subtle rep count.
+
+### Phase 9 -- Session Resume (Done 20260403)
+
+useSessionResume hook saves active section, mode, shuffle order, and position to localStorage. Resume prompt on home screen for same-day sessions. Auto-clears on midnight rollover.
 
 ---
 
@@ -313,5 +287,7 @@ This is fire-and-forget setup. Once it's in, every unhandled error in production
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.0 | 20260402 | Initial build prompts for 7-phase Claude Code build |
-| v2.0 | 20260403 | Added Phase 7-8 (multi-rep A+D), Phase 9-11 (session resume, haptics, focus mode), Phase 12-14 (tests, CI, Sentry) |
+| v1.0 | 20260402 | Initial build prompts for 7-phase Claude Code build (Phases 0-6) |
+| v2.0 | 20260403 | Added Phases 7-14: multi-rep, session resume, haptics, focus mode, tests, CI, Sentry |
+| v2.1 | 20260403 | Consolidated into single file. Completed phases (0-6 + hotfix) archived at back. Status table added. |
+| v2.2 | 20260403 | Fixed status: Phases 7-9 confirmed done from codebase. Moved to archive with summaries. Phase 10 is next. |

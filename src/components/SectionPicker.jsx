@@ -83,15 +83,15 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
             <button
               key={section.id}
               onClick={() => onSelectSection(section)}
-              className={`text-left p-4 rounded-2xl border transition-all active:scale-[0.97]
+              className={`text-left p-5 rounded-2xl border transition-all active:scale-[0.97] min-h-[120px]
                 ${complete
                   ? 'border-emerald-200 bg-emerald-50/50'
                   : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}
             >
               <div className="text-2xl mb-2">{section.icon}</div>
-              <div className="text-sm font-medium text-gray-900 leading-tight">{section.title}</div>
-              <div className="text-xs text-gray-400 mt-0.5">{section.subtitle}</div>
+              <div className="text-base font-medium text-gray-900 leading-tight">{section.title}</div>
+              <div className="text-sm text-gray-400 mt-0.5">{section.subtitle}</div>
 
               <div className="mt-3 flex items-center gap-2">
                 <ProgressBar done={done} total={total} className="flex-1" />

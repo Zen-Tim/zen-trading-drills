@@ -1,8 +1,8 @@
-# Zen Drills v1.5 · 20260403
+# Zen Drills v1.6 - 20260403
 
-## Status: LIVE — Phase 7+ In Progress
+## Status: LIVE -- Phases 0-9 Done
 
-Core app built and deployed (Phases 0-6). Multi-rep and polish features queued (Phases 7-14). See `Zen_Drills_Build_Prompts_v2.0_20260403.md` for build prompts.
+Core app with multi-rep and session resume deployed. Polish features queued (Phases 10-14). See `Zen_Drills_Build_Prompts_v2.2_20260403.md` for build prompts.
 
 ---
 
@@ -42,6 +42,7 @@ zen-drills/
       useProgress.js       # Read/write daily progress to Vercel KV
       useShuffle.js        # Shuffle logic + state (supports new rounds)
       useTimer.js          # Session and per-item timing
+      useSessionResume.js  # Save/restore drill session across app restarts
     App.jsx                # Router between views + bottom tab bar
     main.jsx               # Vite entry + service worker registration
   api/
@@ -89,32 +90,29 @@ Each item gets a stable ID so progress tracking doesn't break when items are reo
 
 ## Data: Progress (Vercel KV)
 
-Keyed by a simple user token (no auth system -- just a self-generated ID stored in localStorage, synced across devices by entering it once).
+All KV keys use the fixed prefix `zen-tim` (no auth, no token generation -- single-user app).
 
 ```
-Key:    drills:progress:{userToken}:{YYYYMMDD}
+Key:    drills:progress:zen-tim:{YYYYMMDD}
 Value:  { "htf": { "htf-001": 2, "htf-003": 1 }, "open": { "open-002": 1 } }
         # section -> { itemId: repCount }
         # repCount >= 1 means done, value = number of times drilled today
-        # (v1.4 used arrays — auto-migrated on first load)
 
-Key:    drills:streak:{userToken}
+Key:    drills:streak:zen-tim
 Value:  { "current": 5, "lastDate": "20260402" }
 
-Key:    drills:heatmap:{userToken}
+Key:    drills:heatmap:zen-tim
 Value:  { "20260401": 12, "20260402": 8 }   # date -> total reps count
 
-Key:    drills:timer:{userToken}:{YYYYMMDD}
+Key:    drills:timer:zen-tim:{YYYYMMDD}
 Value:  { "sessionSeconds": 1320, "items": { "htf-001": 45, "htf-003": 62 } }
 
-Key:    drills:analytics:{userToken}
+Key:    drills:analytics:zen-tim
 Value:  { section counts, per-item last-drilled dates }
 
 Key:    backup:{YYYYMMDD}
 Value:  { snapshot of all drills:* keys, rolling 30-day retention }
 ```
-
-**Migration from v1.4 array format:** The progress value changed from arrays (sets of done IDs) to objects (count maps). On first load, useProgress detects the old array format and auto-converts: each ID in the array becomes `{ id: 1 }`. No manual migration needed.
 
 One serverless API route (`/api/progress`) handles GET and POST.
 
@@ -142,11 +140,15 @@ A "New Round" button appears at the section level once all items in the current 
 
 ---
 
+## Session Resume
+
+When the app is closed mid-session, it saves the current state (section, mode, shuffle order, position) to localStorage. On reopen the same day, a "Resume" prompt appears on the home screen. Sessions from previous days are discarded silently at midnight.
+
+---
+
 ## Multi-Device Sync
 
-No login system. On first use the app generates a short token (e.g. `zen-7f3k`). You note it down. On a second device, enter the same token in settings. Both devices read/write to the same KV key.
-
-Simple, no auth infrastructure, good enough for a single user.
+Fixed KV key prefix (`zen-tim`). Every device, every refresh, every reinstall reads and writes the same keys. No tokens, no setup, no sync UI.
 
 ---
 
@@ -214,13 +216,13 @@ The `public/manifest.json` and service worker handle installability. After first
 
 ### 6. Daily use
 
-Open the app on any device. First time generates a sync token. Enter the same token on other devices via the settings icon. Drill away.
+Open the app on any device. Progress syncs automatically via KV -- no setup needed.
 
 ---
 
 ## Views
 
-1. **Home** -- Section tiles with today's progress per section (unique items done / total), overall progress bar, streak counter, session timer visible when running. Subtle rep count shown if total reps > unique items.
+1. **Home** -- Section tiles with today's progress per section (unique items done / total), overall progress bar, streak counter, session timer visible when running. Subtle rep count shown if total reps > unique items. Resume prompt if a session was interrupted today.
 2. **Drill (Flashcard)** -- One item at a time, swipe/tap to advance, mark done button, "Again" button appears briefly after marking done, per-item timer visible, rep count badge if item done more than once
 3. **Drill (Checklist)** -- Full shuffled list, tap items to check off, tap completed items to add reps, rep count badge on completed items (no per-item timing in this mode)
 4. **Heatmap** -- GitHub-style calendar grid showing daily drill activity over past ~180 days, colour intensity by total rep count
@@ -254,6 +256,8 @@ Open the app on any device. First time generates a sync token. Enter the same to
 11. **Editing drills:** When items are renamed/merged/deleted, progress history migrates automatically via migrations field in drills.json
 12. **Backup:** Automatic daily snapshot via Vercel cron (06:00 UTC), rolling 30-day retention
 13. **Multi-rep:** Items can be drilled multiple times per day. "Drill Again" on individual items, "New Round" to reshuffle entire section. Progress tiles show unique coverage, heatmap counts total reps.
+14. **Session resume:** App saves drill state to localStorage on close, offers resume prompt on same-day reopen.
+15. **Auth:** None. Fixed KV key prefix (`zen-tim`), no tokens, no login.
 
 ---
 
@@ -262,8 +266,9 @@ Open the app on any device. First time generates a sync token. Enter the same to
 | Version | Date | Changes |
 |---------|------|---------|
 | v1.0 | 20260402 | Initial architecture sketch |
-| v1.1 | 20260402 | Locked all decisions: light theme, PWA, text-only items, no timer, heatmap history. Added PWA files and Heatmap component to structure. Added heatmap KV key. |
+| v1.1 | 20260402 | Locked all decisions: light theme, PWA, text-only items, no timer, heatmap history. |
 | v1.2 | 20260402 | Reshaped as project README. Added full setup guide with Vercel KV step-by-step. |
-| v1.3 | 20260402 | Added session + per-item timer, full analytics dashboard, automatic backup via cron, ID migration on drill edits, midnight reset, last-write-wins sync. Updated repo structure, KV schema, views. |
-| v1.4 | 20260402 | BUILD COMPLETE. All 6 phases deployed. Timer fix: session timer pauses on home (not stops), per-item timer card mode only, no idle timeout. Compacted flashcard view for mobile. Added Timer Behaviour section. |
-| v1.5 | 20260403 | Multi-rep system: progress data model changed from array to count map, added "Drill Again" button on items, "New Round" button at section level, rep count badges. Auto-migration from v1.4 array format. Added session resume, haptics, focus mode, tests, CI, Sentry to roadmap. |
+| v1.3 | 20260402 | Added session + per-item timer, full analytics dashboard, automatic backup via cron, ID migration on drill edits, midnight reset, last-write-wins sync. |
+| v1.4 | 20260402 | BUILD COMPLETE (Phases 0-6). Timer fix: session timer pauses on home, per-item timer card mode only. |
+| v1.5 | 20260403 | Multi-rep system (Phases 7-8): count map data model, "Drill Again", "New Round", rep badges. Session resume (Phase 9). Token hotfix: hardcoded to zen-tim, killed token UI. |
+| v1.6 | 20260403 | README cleanup: updated status, fixed multi-device section for post-hotfix reality, added useSessionResume to repo structure, added session resume and auth decisions. |

@@ -20,10 +20,10 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
     <div className={isFlashcard ? 'h-dvh flex flex-col bg-white' : 'min-h-dvh bg-white'}>
       {/* Mode toggle + reshuffle bar */}
       <div className="max-w-lg mx-auto px-4 pt-2 pb-1 flex items-center gap-2 bg-white sticky top-0 z-20">
-        <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
+        <div className="flex bg-gray-100 rounded-lg p-0.5 text-sm font-medium">
           <button
             onClick={() => setMode('flashcard')}
-            className={`px-4 py-2 min-h-[36px] rounded-md transition-all ${
+            className={`px-5 py-2.5 min-h-[48px] rounded-md transition-all ${
               mode === 'flashcard' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
             }`}
           >
@@ -31,7 +31,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           </button>
           <button
             onClick={() => setMode('checklist')}
-            className={`px-4 py-2 min-h-[36px] rounded-md transition-all ${
+            className={`px-5 py-2.5 min-h-[48px] rounded-md transition-all ${
               mode === 'checklist' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
             }`}
           >
@@ -43,10 +43,10 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
 
         <button
           onClick={onNewRound}
-          className="ml-auto px-3 h-9 flex items-center gap-1.5 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-xs font-medium text-gray-500"
+          className="ml-auto px-4 min-h-[48px] flex items-center gap-1.5 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-500"
           title="New Round"
         >
-          <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 20l5-5M20 4l-5 5" />
           </svg>
           New Round
@@ -152,7 +152,7 @@ function BottomNav({ view, onNavigate }) {
           <button
             key={tab.id}
             onClick={() => onNavigate(tab.id)}
-            className={`flex-1 flex flex-col items-center gap-0.5 min-h-[48px] py-2.5 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-0.5 min-h-[56px] py-3 transition-colors ${
               view === tab.id ? 'text-gray-900' : 'text-gray-400'
             }`}
           >

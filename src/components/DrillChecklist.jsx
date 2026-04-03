@@ -19,14 +19,14 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
       <div className="px-4 pt-4 pb-2 flex items-center gap-3 sticky top-0 bg-white/90 backdrop-blur-sm z-10">
         <button
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
+          className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
         >
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-gray-900 truncate">{section.icon} {section.title}</div>
+          <div className="text-base font-medium text-gray-900 truncate">{section.icon} {section.title}</div>
         </div>
         <span className="text-xs text-gray-400 tabular-nums">{doneCount} / {items.length}</span>
       </div>
@@ -47,22 +47,22 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
               <li key={item.id}>
                 <button
                   onClick={() => handleItemClick(item)}
-                  className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-all active:scale-[0.98]
+                  className={`w-full text-left px-4 py-4 min-h-[56px] rounded-xl flex items-center gap-3 transition-all active:scale-[0.98]
                     ${done ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
                 >
                   {/* Checkbox */}
-                  <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all
+                  <span className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all
                     ${done ? 'bg-emerald-400 border-emerald-400' : 'border-gray-200'}`}
                   >
                     {done && (
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
                     )}
                   </span>
 
                   {/* Text */}
-                  <span className={`flex-1 text-sm leading-snug transition-all
+                  <span className={`flex-1 text-base leading-snug transition-all
                     ${done ? 'text-gray-400 line-through' : 'text-gray-800'}`}
                   >
                     {item.text}
@@ -70,7 +70,7 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
 
                   {/* Rep count badge (only show x2+) */}
                   {reps > 1 && (
-                    <span className="text-[11px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                    <span className="text-xs font-medium text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 flex-shrink-0">
                       x{reps}
                     </span>
                   )}
@@ -85,7 +85,7 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
           <div className="mt-6 flex justify-center">
             <button
               onClick={onNewRound}
-              className="px-6 h-11 rounded-full bg-gray-900 text-white font-medium text-sm active:scale-[0.97] transition-all"
+              className="w-full max-w-xs h-14 rounded-full bg-gray-900 text-white font-medium text-base active:scale-[0.97] transition-all"
             >
               New Round
             </button>
