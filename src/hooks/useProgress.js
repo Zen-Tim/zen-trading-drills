@@ -31,6 +31,30 @@ export function setToken(newToken) {
   localStorage.setItem('zen-drills-token', newToken)
 }
 
+// Convert old array-format progress to count-map format
+// Old: { "htf": ["htf-001", "htf-003"] }
+// New: { "htf": { "htf-001": 1, "htf-003": 1 } }
+function migrateArrayToCountMap(progressData) {
+  let changed = false
+  const migrated = {}
+
+  for (const sectionId in progressData) {
+    const items = progressData[sectionId]
+    if (Array.isArray(items)) {
+      changed = true
+      const countMap = {}
+      for (const itemId of items) {
+        countMap[itemId] = 1
+      }
+      migrated[sectionId] = countMap
+    } else {
+      migrated[sectionId] = items
+    }
+  }
+
+  return { data: migrated, changed }
+}
+
 // Apply migrations to a progress object: remap old IDs to new IDs, remove deleted IDs
 function migrateProgress(progressData, migrations) {
   if (!migrations || Object.keys(migrations).length === 0) return { data: progressData, changed: false }
@@ -40,19 +64,18 @@ function migrateProgress(progressData, migrations) {
 
   for (const sectionId in progressData) {
     const items = progressData[sectionId]
-    const newItems = []
-    for (const itemId of items) {
+    const newItems = {}
+    for (const itemId in items) {
+      const count = items[itemId]
       if (itemId in migrations) {
         changed = true
         const newId = migrations[itemId]
         // null means deleted — drop it; otherwise remap
-        if (newId !== null && !newItems.includes(newId)) {
-          newItems.push(newId)
+        if (newId !== null) {
+          newItems[newId] = (newItems[newId] || 0) + count
         }
       } else {
-        if (!newItems.includes(itemId)) {
-          newItems.push(itemId)
-        }
+        newItems[itemId] = (newItems[itemId] || 0) + count
       }
     }
     migrated[sectionId] = newItems
@@ -143,6 +166,17 @@ export function useProgress() {
           timerRes.json(),
         ])
 
+        // Auto-migrate old array format to count map format
+        const arrayMigration = migrateArrayToCountMap(progressData)
+        if (arrayMigration.changed) {
+          progressData = arrayMigration.data
+          fetch('/api/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, date, data: progressData }),
+          }).catch((err) => console.error('Failed to save array-to-countmap migration:', err))
+        }
+
         // Apply ID migrations if any exist
         if (Object.keys(migrations).length > 0 && !migratedRef.current) {
           migratedRef.current = true
@@ -193,13 +227,14 @@ export function useProgress() {
     load()
   }, [token, date])
 
-  const markDone = useCallback(
-    async (sectionId, itemId) => {
+  const incrementRep = useCallback(
+    (sectionId, itemId) => {
       setProgress((prev) => {
-        const sectionItems = prev[sectionId] || []
-        if (sectionItems.includes(itemId)) return prev
-
-        const next = { ...prev, [sectionId]: [...sectionItems, itemId] }
+        const sectionItems = prev[sectionId] || {}
+        const next = {
+          ...prev,
+          [sectionId]: { ...sectionItems, [itemId]: (sectionItems[itemId] || 0) + 1 },
+        }
 
         // Fire and forget the API call
         fetch('/api/progress', {
@@ -223,14 +258,19 @@ export function useProgress() {
     [token, date]
   )
 
+  const markDone = useCallback(
+    (sectionId, itemId) => {
+      incrementRep(sectionId, itemId)
+    },
+    [incrementRep]
+  )
+
   const unmarkDone = useCallback(
-    async (sectionId, itemId) => {
+    (sectionId, itemId) => {
       setProgress((prev) => {
-        const sectionItems = prev[sectionId] || []
-        const next = {
-          ...prev,
-          [sectionId]: sectionItems.filter((id) => id !== itemId),
-        }
+        const sectionItems = { ...(prev[sectionId] || {}) }
+        delete sectionItems[itemId]
+        const next = { ...prev, [sectionId]: sectionItems }
 
         fetch('/api/progress', {
           method: 'POST',
@@ -244,23 +284,42 @@ export function useProgress() {
     [token, date]
   )
 
-  const isDone = useCallback(
+  const getRepCount = useCallback(
     (sectionId, itemId) => {
-      return (progress[sectionId] || []).includes(itemId)
+      const section = progress[sectionId]
+      if (!section) return 0
+      return section[itemId] || 0
     },
     [progress]
+  )
+
+  const getUniqueCount = useCallback(
+    (sectionId) => {
+      const section = progress[sectionId]
+      if (!section) return 0
+      return Object.values(section).filter((c) => c >= 1).length
+    },
+    [progress]
+  )
+
+  const isDone = useCallback(
+    (sectionId, itemId) => {
+      return getRepCount(sectionId, itemId) >= 1
+    },
+    [getRepCount]
   )
 
   const sectionProgress = useCallback(
     (sectionId, totalItems) => {
-      const done = (progress[sectionId] || []).length
+      const done = getUniqueCount(sectionId)
       return { done, total: totalItems }
     },
-    [progress]
+    [getUniqueCount]
   )
 
+  // Total reps across all sections (sum of all counts)
   const totalDone = Object.values(progress).reduce(
-    (sum, items) => sum + items.length,
+    (sum, section) => sum + Object.values(section || {}).reduce((s, c) => s + c, 0),
     0
   )
 
@@ -274,6 +333,9 @@ export function useProgress() {
     loading,
     markDone,
     unmarkDone,
+    incrementRep,
+    getRepCount,
+    getUniqueCount,
     isDone,
     sectionProgress,
     totalDone,

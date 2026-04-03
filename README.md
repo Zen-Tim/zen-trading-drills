@@ -1,14 +1,14 @@
-# Zen Drills v1.4 · 20260402
+# Zen Drills v1.5 · 20260403
 
-## Status: BUILD COMPLETE
+## Status: LIVE — Phase 7+ In Progress
 
-All 6 phases built and deployed. App is live and installable as PWA.
+Core app built and deployed (Phases 0-6). Multi-rep and polish features queued (Phases 7-14). See `Zen_Drills_Build_Prompts_v2.0_20260403.md` for build prompts.
 
 ---
 
 ## What It Is
 
-A personal daily practice app for PA trading drills. Pick a section, shuffle the items, work through them in flashcard or checklist mode, track daily progress.
+A personal daily practice app for PA trading drills. Pick a section, shuffle the items, work through them in flashcard or checklist mode, track daily progress. Supports multiple reps per item per day.
 
 ---
 
@@ -32,15 +32,15 @@ zen-drills/
       drills.json          # All sections and items (145 items, 8 sections)
     components/
       SectionPicker.jsx    # Landing screen with section tiles
-      DrillFlashcard.jsx   # One-at-a-time card mode
-      DrillChecklist.jsx   # Full shuffled list, rapid-tap mode
+      DrillFlashcard.jsx   # One-at-a-time card mode (with Drill Again)
+      DrillChecklist.jsx   # Full shuffled list, rapid-tap mode (with rep counts)
       Heatmap.jsx          # GitHub-style calendar heatmap
       Analytics.jsx        # Section frequency, time patterns, trends
       Timer.jsx            # Session + per-item stopwatch
       ProgressBar.jsx      # Reusable progress bar
     hooks/
       useProgress.js       # Read/write daily progress to Vercel KV
-      useShuffle.js        # Shuffle logic + state
+      useShuffle.js        # Shuffle logic + state (supports new rounds)
       useTimer.js          # Session and per-item timing
     App.jsx                # Router between views + bottom tab bar
     main.jsx               # Vite entry + service worker registration
@@ -93,13 +93,16 @@ Keyed by a simple user token (no auth system -- just a self-generated ID stored 
 
 ```
 Key:    drills:progress:{userToken}:{YYYYMMDD}
-Value:  { "htf": ["htf-001", "htf-003"], "open": ["open-002"] }
+Value:  { "htf": { "htf-001": 2, "htf-003": 1 }, "open": { "open-002": 1 } }
+        # section -> { itemId: repCount }
+        # repCount >= 1 means done, value = number of times drilled today
+        # (v1.4 used arrays — auto-migrated on first load)
 
 Key:    drills:streak:{userToken}
 Value:  { "current": 5, "lastDate": "20260402" }
 
 Key:    drills:heatmap:{userToken}
-Value:  { "20260401": 12, "20260402": 8 }   # date -> items drilled count
+Value:  { "20260401": 12, "20260402": 8 }   # date -> total reps count
 
 Key:    drills:timer:{userToken}:{YYYYMMDD}
 Value:  { "sessionSeconds": 1320, "items": { "htf-001": 45, "htf-003": 62 } }
@@ -111,7 +114,31 @@ Key:    backup:{YYYYMMDD}
 Value:  { snapshot of all drills:* keys, rolling 30-day retention }
 ```
 
+**Migration from v1.4 array format:** The progress value changed from arrays (sets of done IDs) to objects (count maps). On first load, useProgress detects the old array format and auto-converts: each ID in the array becomes `{ id: 1 }`. No manual migration needed.
+
 One serverless API route (`/api/progress`) handles GET and POST.
+
+---
+
+## Multi-Rep System
+
+Items can be drilled more than once per day. Two mechanisms:
+
+### A -- Drill Again (individual item)
+
+In **flashcard mode**: after marking an item done, a small "Again" button appears briefly (2-3 seconds, then fades). Tapping it increments the rep count for that item and keeps it in the current queue for another pass.
+
+In **checklist mode**: completed items show a small rep count badge (e.g. "x2"). Tapping a completed item increments its count (not unchecks it). The item stays visually completed but the badge updates.
+
+### D -- New Round (section level)
+
+A "New Round" button appears at the section level once all items in the current shuffle are done (or at any time via the section menu). Tapping it reshuffles all items and starts a fresh pass. All items appear undone in the new round, but rep counts carry over -- an item done once in round 1 and once in round 2 shows x2.
+
+### Progress counting
+
+- **Section tile progress** on home screen shows unique items done / total items (not reps). "12/17 items" means 12 distinct items have been drilled at least once.
+- **Heatmap** counts total reps across all sections (incentivises volume).
+- **Analytics** shows both: unique coverage and total reps.
 
 ---
 
@@ -193,13 +220,13 @@ Open the app on any device. First time generates a sync token. Enter the same to
 
 ## Views
 
-1. **Home** -- Section tiles with today's progress per section, overall progress bar, streak counter, session timer visible when running
-2. **Drill (Flashcard)** -- One item at a time, swipe/tap to advance, mark done button, per-item timer visible
-3. **Drill (Checklist)** -- Full shuffled list, tap items to check off (no per-item timing in this mode)
-4. **Heatmap** -- GitHub-style calendar grid showing daily drill activity over past ~180 days, colour intensity by item count
-5. **Analytics** -- Section frequency breakdown, average time per item, neglected items (not drilled in 30+ days), day-of-week patterns, 30-day trend
+1. **Home** -- Section tiles with today's progress per section (unique items done / total), overall progress bar, streak counter, session timer visible when running. Subtle rep count shown if total reps > unique items.
+2. **Drill (Flashcard)** -- One item at a time, swipe/tap to advance, mark done button, "Again" button appears briefly after marking done, per-item timer visible, rep count badge if item done more than once
+3. **Drill (Checklist)** -- Full shuffled list, tap items to check off, tap completed items to add reps, rep count badge on completed items (no per-item timing in this mode)
+4. **Heatmap** -- GitHub-style calendar grid showing daily drill activity over past ~180 days, colour intensity by total rep count
+5. **Analytics** -- Section frequency breakdown, average time per item, neglected items (not drilled in 30+ days), day-of-week patterns, 30-day trend, unique coverage vs total reps
 6. **Bottom nav** -- Fixed tab bar: Drills (home), Activity (heatmap), Analytics. Hidden during drill sessions.
-7. Toggle between flashcard/checklist modes within a section. Shuffle/reshuffle button available in both.
+7. Toggle between flashcard/checklist modes within a section. Shuffle/reshuffle button available in both. "New Round" button available when all items in current shuffle are done.
 
 ---
 
@@ -226,6 +253,7 @@ Open the app on any device. First time generates a sync token. Enter the same to
 10. **Multi-device conflicts:** Last write wins (one person, mostly phone)
 11. **Editing drills:** When items are renamed/merged/deleted, progress history migrates automatically via migrations field in drills.json
 12. **Backup:** Automatic daily snapshot via Vercel cron (06:00 UTC), rolling 30-day retention
+13. **Multi-rep:** Items can be drilled multiple times per day. "Drill Again" on individual items, "New Round" to reshuffle entire section. Progress tiles show unique coverage, heatmap counts total reps.
 
 ---
 
@@ -237,4 +265,5 @@ Open the app on any device. First time generates a sync token. Enter the same to
 | v1.1 | 20260402 | Locked all decisions: light theme, PWA, text-only items, no timer, heatmap history. Added PWA files and Heatmap component to structure. Added heatmap KV key. |
 | v1.2 | 20260402 | Reshaped as project README. Added full setup guide with Vercel KV step-by-step. |
 | v1.3 | 20260402 | Added session + per-item timer, full analytics dashboard, automatic backup via cron, ID migration on drill edits, midnight reset, last-write-wins sync. Updated repo structure, KV schema, views. |
-| v1.4 | 20260402 | BUILD COMPLETE. All 6 phases deployed. Timer fix: session timer pauses on home (not stops), per-item timer card mode only, no idle timeout. Compacted flashcard view for mobile. Added Timer Behaviour section. Updated decisions and views to reflect final state. |
+| v1.4 | 20260402 | BUILD COMPLETE. All 6 phases deployed. Timer fix: session timer pauses on home (not stops), per-item timer card mode only, no idle timeout. Compacted flashcard view for mobile. Added Timer Behaviour section. |
+| v1.5 | 20260403 | Multi-rep system: progress data model changed from array to count map, added "Drill Again" button on items, "New Round" button at section level, rep count badges. Auto-migration from v1.4 array format. Added session resume, haptics, focus mode, tests, CI, Sentry to roadmap. |

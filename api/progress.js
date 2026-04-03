@@ -71,23 +71,42 @@ export default async function handler(req, res) {
     // Default: progress
     await kv.set(`drills:progress:${token}:${dateStr}`, data)
 
-    // Update heatmap count
+    // Update heatmap count — sum all rep counts across sections
     const heatmap = (await kv.get(`drills:heatmap:${token}`)) || {}
-    let totalItems = 0
+    let totalReps = 0
     for (const sectionId in data) {
-      totalItems += data[sectionId].length
+      const section = data[sectionId]
+      if (typeof section === 'object' && !Array.isArray(section)) {
+        for (const itemId in section) {
+          totalReps += section[itemId]
+        }
+      } else if (Array.isArray(section)) {
+        totalReps += section.length
+      }
     }
-    heatmap[dateStr] = totalItems
+    heatmap[dateStr] = totalReps
     await kv.set(`drills:heatmap:${token}`, heatmap)
 
     // Update analytics aggregates
     const analytics = (await kv.get(`drills:analytics:${token}`)) || { sectionCounts: {}, itemLastDrilled: {} }
     for (const sectionId in data) {
-      analytics.sectionCounts[sectionId] = (analytics.sectionCounts[sectionId] || 0) + data[sectionId].length
-      for (const itemId of data[sectionId]) {
-        const prev = analytics.itemLastDrilled[itemId]
-        if (!prev || dateStr >= prev) {
-          analytics.itemLastDrilled[itemId] = dateStr
+      const section = data[sectionId]
+      if (typeof section === 'object' && !Array.isArray(section)) {
+        const sectionTotal = Object.values(section).reduce((s, c) => s + c, 0)
+        analytics.sectionCounts[sectionId] = (analytics.sectionCounts[sectionId] || 0) + sectionTotal
+        for (const itemId in section) {
+          const prev = analytics.itemLastDrilled[itemId]
+          if (!prev || dateStr >= prev) {
+            analytics.itemLastDrilled[itemId] = dateStr
+          }
+        }
+      } else if (Array.isArray(section)) {
+        analytics.sectionCounts[sectionId] = (analytics.sectionCounts[sectionId] || 0) + section.length
+        for (const itemId of section) {
+          const prev = analytics.itemLastDrilled[itemId]
+          if (!prev || dateStr >= prev) {
+            analytics.itemLastDrilled[itemId] = dateStr
+          }
         }
       }
     }
@@ -95,7 +114,7 @@ export default async function handler(req, res) {
 
     // Update streak
     const streak = (await kv.get(`drills:streak:${token}`)) || { current: 0, lastDate: null }
-    if (totalItems > 0 && streak.lastDate !== dateStr) {
+    if (totalReps > 0 && streak.lastDate !== dateStr) {
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = `${yesterday.getFullYear()}${String(yesterday.getMonth() + 1).padStart(2, '0')}${String(yesterday.getDate()).padStart(2, '0')}`
