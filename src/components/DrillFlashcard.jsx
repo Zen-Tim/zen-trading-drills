@@ -267,8 +267,9 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
                 showUndoToast(getSid(current), current.id)
               } else {
                 incrementRep(getSid(current), current.id)
+                setPlusOneKey((k) => k + 1)
                 stopItem()
-                next()
+                setTimeout(() => next(), 400)
               }
             }}
             className={`flex-1 h-14 rounded-full font-medium text-base transition-all active:scale-[0.97]
