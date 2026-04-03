@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import drillsData from './data/drills.json'
 import { useAuth } from './hooks/useAuth'
+import { useDrillContent } from './hooks/useDrillContent'
 import { useSupabaseProgress } from './hooks/useSupabaseProgress'
 import { useShuffle } from './hooks/useShuffle'
 import { useTimer } from './hooks/useTimer'
@@ -12,8 +12,6 @@ import Heatmap from './components/Heatmap'
 import Analytics from './components/Analytics'
 import Auth from './components/Auth'
 import { SessionTimer } from './components/Timer'
-
-const totalItems = drillsData.sections.reduce((sum, s) => sum + s.items.length, 0)
 
 function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange }) {
   const isFlashcard = mode === 'flashcard'
@@ -170,10 +168,13 @@ function BottomNav({ view, onNavigate }) {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
+  const { sections: drillSections, loading: contentLoading, error: contentError } = useDrillContent(user)
   const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useSupabaseProgress(user)
 
+  const totalItems = drillSections.reduce((sum, s) => sum + s.items.length, 0)
+
   // Unique items done across all sections (for home progress bar)
-  const uniqueDone = drillsData.sections.reduce((sum, s) => sum + getUniqueCount(s.id), 0)
+  const uniqueDone = drillSections.reduce((sum, s) => sum + getUniqueCount(s.id), 0)
   const timer = useTimer(token)
   const [activeSection, setActiveSection] = useState(null)
   const [resumeState, setResumeState] = useState(null)
@@ -191,7 +192,7 @@ export default function App() {
 
   // Resolve saved session's sectionId to the actual section object
   const savedSectionObj = savedSession
-    ? drillsData.sections.find((s) => s.id === savedSession.sectionId)
+    ? drillSections.find((s) => s.id === savedSession.sectionId)
     : null
 
   function enterSection(section, resume) {
@@ -207,7 +208,7 @@ export default function App() {
   function handleResume() {
     const session = consumeSession()
     if (!session) return
-    const section = drillsData.sections.find((s) => s.id === session.sectionId)
+    const section = drillSections.find((s) => s.id === session.sectionId)
     if (!section) return
     enterSection(section, {
       mode: session.mode,
@@ -242,10 +243,22 @@ export default function App() {
     }
   }, [activeSection, saveSession])
 
-  if (authLoading || loading) {
+  if (authLoading || loading || contentLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (contentError) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-6">
+        <div className="text-center">
+          <p className="text-red-500 text-sm font-medium mb-2">Failed to load drills</p>
+          <p className="text-gray-400 text-xs">{contentError}</p>
+          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm">Retry</button>
+        </div>
       </div>
     )
   }
@@ -280,7 +293,7 @@ export default function App() {
       <div className="pb-20">
         {view === 'home' && (
           <SectionPicker
-            sections={drillsData.sections}
+            sections={drillSections}
             sectionProgress={sectionProgress}
             totalDone={uniqueDone}
             totalReps={totalDone}
@@ -301,7 +314,7 @@ export default function App() {
         )}
         {view === 'analytics' && (
           <Analytics
-            sections={drillsData.sections}
+            sections={drillSections}
             heatmap={heatmap}
             analytics={analytics}
             timerData={timerData}
