@@ -2,13 +2,18 @@ import { useState, useRef, useEffect } from 'react'
 import ProgressBar from './ProgressBar'
 import { ItemTimer } from './Timer'
 
-export default function DrillFlashcard({ section, items, isDone, markDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed }) {
-  const [index, setIndex] = useState(0)
+export default function DrillFlashcard({ section, items, isDone, markDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange }) {
+  const [index, setIndex] = useState(initialIndex || 0)
   const [, setTick] = useState(0)
   const [showAgain, setShowAgain] = useState(false)
   const [plusOneKey, setPlusOneKey] = useState(0)
   const touchStart = useRef(null)
   const againTimer = useRef(null)
+
+  // Report index changes to parent for session persistence
+  useEffect(() => {
+    onIndexChange?.(index)
+  }, [index, onIndexChange])
 
   const current = items[index]
   const doneCount = items.filter((item) => isDone(section.id, item.id)).length

@@ -1,7 +1,7 @@
 import ProgressBar from './ProgressBar'
 import { SessionTimer } from './Timer'
 
-export default function SectionPicker({ sections, sectionProgress, totalDone, totalReps, totalItems, streak, onSelectSection, sessionSeconds, getRepCount, getUniqueCount }) {
+export default function SectionPicker({ sections, sectionProgress, totalDone, totalReps, totalItems, streak, onSelectSection, sessionSeconds, getRepCount, getUniqueCount, savedSession, savedSectionObj, onResume, onStartFresh, }) {
   return (
     <div className="min-h-screen bg-white px-4 pt-6 pb-12 max-w-lg mx-auto">
       {/* Header */}
@@ -9,6 +9,36 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
         <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Zen Drills</h1>
         <p className="text-sm text-gray-400 mt-1">Daily PA practice</p>
       </div>
+
+      {/* Resume banner */}
+      {savedSession && savedSectionObj && (() => {
+        const doneCount = getUniqueCount(savedSectionObj.id)
+        const totalCount = savedSectionObj.items.length
+        return (
+          <div className="mb-6 p-4 rounded-2xl border border-blue-100 bg-blue-50/50">
+            <p className="text-sm font-medium text-gray-800 mb-1">
+              Continue {savedSectionObj.icon} {savedSectionObj.title}?
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              {doneCount}/{totalCount} done · {savedSession.mode === 'flashcard' ? 'Cards' : 'List'} mode
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={onResume}
+                className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium active:scale-[0.97] transition-all"
+              >
+                Resume
+              </button>
+              <button
+                onClick={onStartFresh}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-500 text-sm font-medium active:scale-[0.97] transition-all"
+              >
+                Start Fresh
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Streak + Session timer */}
       <div className="mb-6 flex items-center gap-3 text-sm text-gray-500">

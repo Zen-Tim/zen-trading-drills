@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import drillsData from './data/drills.json'
 import { useProgress } from './hooks/useProgress'
 import { useShuffle } from './hooks/useShuffle'
 import { useTimer } from './hooks/useTimer'
+import { useSessionResume } from './hooks/useSessionResume'
 import SectionPicker from './components/SectionPicker'
 import DrillFlashcard from './components/DrillFlashcard'
 import DrillChecklist from './components/DrillChecklist'
@@ -12,7 +13,7 @@ import { SessionTimer } from './components/Timer'
 
 const totalItems = drillsData.sections.reduce((sum, s) => sum + s.items.length, 0)
 
-function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds }) {
+function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange }) {
   const isFlashcard = mode === 'flashcard'
 
   return (
@@ -65,6 +66,8 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           startItem={startItem}
           stopItem={stopItem}
           getItemElapsed={getItemElapsed}
+          initialIndex={initialIndex}
+          onIndexChange={onIndexChange}
         />
       ) : (
         <DrillChecklist
@@ -83,9 +86,21 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
   )
 }
 
-function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds }) {
-  const [mode, setMode] = useState('flashcard')
-  const { shuffled, reshuffle } = useShuffle(section.items)
+function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds, resumeState, onSessionChange }) {
+  const [mode, setMode] = useState(resumeState?.mode || 'flashcard')
+  const { shuffled, reshuffle } = useShuffle(section.items, resumeState?.shuffleOrder)
+  const initialIndex = resumeState?.index || 0
+  const indexRef = useRef(initialIndex)
+
+  const handleIndexChange = useCallback((newIndex) => {
+    indexRef.current = newIndex
+    onSessionChange?.({ mode, index: newIndex, shuffleOrder: shuffled.map((i) => i.id) })
+  }, [mode, shuffled, onSessionChange])
+
+  // Notify parent whenever mode or shuffle changes
+  useEffect(() => {
+    onSessionChange?.({ mode, index: indexRef.current, shuffleOrder: shuffled.map((i) => i.id) })
+  }, [mode, shuffled, onSessionChange])
 
   return (
     <DrillView
@@ -105,6 +120,8 @@ function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, get
       stopItem={stopItem}
       getItemElapsed={getItemElapsed}
       sessionSeconds={sessionSeconds}
+      initialIndex={initialIndex}
+      onIndexChange={handleIndexChange}
     />
   )
 }
@@ -155,19 +172,63 @@ export default function App() {
   const uniqueDone = drillsData.sections.reduce((sum, s) => sum + getUniqueCount(s.id), 0)
   const timer = useTimer(token)
   const [activeSection, setActiveSection] = useState(null)
+  const [resumeState, setResumeState] = useState(null)
   const [view, setView] = useState('home')
+  const { savedSession, saveSession, clearSession, consumeSession } = useSessionResume()
+  const sessionStateRef = useRef(null)
 
-  function enterSection(section) {
+  // Resolve saved session's sectionId to the actual section object
+  const savedSectionObj = savedSession
+    ? drillsData.sections.find((s) => s.id === savedSession.sectionId)
+    : null
+
+  function enterSection(section, resume) {
     timer.startSession()
+    if (resume) {
+      setResumeState(resume)
+    } else {
+      setResumeState(null)
+    }
     setActiveSection(section)
+  }
+
+  function handleResume() {
+    const session = consumeSession()
+    if (!session) return
+    const section = drillsData.sections.find((s) => s.id === session.sectionId)
+    if (!section) return
+    enterSection(section, {
+      mode: session.mode,
+      index: session.index,
+      shuffleOrder: session.shuffleOrder,
+    })
+  }
+
+  function handleStartFresh() {
+    clearSession()
   }
 
   function leaveSection() {
     timer.stopItem()
     timer.pauseSession()
     timer.saveTimer()
+    clearSession()
     setActiveSection(null)
+    setResumeState(null)
   }
+
+  // Save session state whenever the drill session reports changes
+  const handleSessionChange = useCallback((state) => {
+    sessionStateRef.current = state
+    if (activeSection) {
+      saveSession({
+        sectionId: activeSection.id,
+        mode: state.mode,
+        index: state.index || 0,
+        shuffleOrder: state.shuffleOrder || [],
+      })
+    }
+  }, [activeSection, saveSession])
 
   if (loading) {
     return (
@@ -180,7 +241,7 @@ export default function App() {
   if (activeSection) {
     return (
       <DrillSession
-        key={activeSection.id}
+        key={activeSection.id + (resumeState ? '-resume' : '')}
         section={activeSection}
         isDone={isDone}
         markDone={markDone}
@@ -192,6 +253,8 @@ export default function App() {
         stopItem={timer.stopItem}
         getItemElapsed={timer.getItemElapsed}
         sessionSeconds={timer.sessionSeconds}
+        resumeState={resumeState}
+        onSessionChange={handleSessionChange}
       />
     )
   }
@@ -211,6 +274,10 @@ export default function App() {
             sessionSeconds={timer.sessionSeconds}
             getRepCount={getRepCount}
             getUniqueCount={getUniqueCount}
+            savedSession={savedSession}
+            savedSectionObj={savedSectionObj}
+            onResume={handleResume}
+            onStartFresh={handleStartFresh}
           />
         )}
         {view === 'heatmap' && (
