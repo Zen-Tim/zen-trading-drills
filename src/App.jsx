@@ -12,9 +12,10 @@ import Heatmap from './components/Heatmap'
 import Analytics from './components/Analytics'
 import Auth from './components/Auth'
 import AddItemForm from './components/AddItemForm'
+import EditItemForm from './components/EditItemForm'
 import { SessionTimer } from './components/Timer'
 
-function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange }) {
+function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange, onEditItem, onDeleteItem, onReorderItems, isRecent }) {
   const isFlashcard = mode === 'flashcard'
 
   return (
@@ -71,6 +72,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           initialIndex={initialIndex}
           onIndexChange={onIndexChange}
           sessionSeconds={sessionSeconds}
+          onEditItem={onEditItem}
         />
       ) : (
         <DrillChecklist
@@ -83,13 +85,17 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           getRepCount={getRepCount}
           onBack={onBack}
           onNewRound={onNewRound}
+          onEditItem={onEditItem}
+          onDeleteItem={onDeleteItem}
+          onReorderItems={onReorderItems}
+          isRecent={isRecent}
         />
       )}
     </div>
   )
 }
 
-function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds, resumeState, onSessionChange }) {
+function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds, resumeState, onSessionChange, onEditItem, onDeleteItem, onReorderItems, isRecent }) {
   const [mode, setMode] = useState(resumeState?.mode || 'flashcard')
   const { shuffled, reshuffle } = useShuffle(section.items, resumeState?.shuffleOrder)
   const initialIndex = resumeState?.index || 0
@@ -125,6 +131,10 @@ function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, get
       sessionSeconds={sessionSeconds}
       initialIndex={initialIndex}
       onIndexChange={handleIndexChange}
+      onEditItem={onEditItem}
+      onDeleteItem={onDeleteItem}
+      onReorderItems={onReorderItems}
+      isRecent={isRecent}
     />
   )
 }
@@ -170,7 +180,7 @@ function BottomNav({ view, onNavigate }) {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
-  const { sections: drillSections, loading: contentLoading, error: contentError, addItem, deleteItem, refetch: refetchContent } = useDrillContent(user)
+  const { sections: drillSections, loading: contentLoading, error: contentError, addItem, deleteItem, updateItem, reorderItems, refetch: refetchContent } = useDrillContent(user)
   const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useSupabaseProgress(user)
 
   const totalItems = drillSections.reduce((sum, s) => sum + s.items.length, 0)
@@ -182,6 +192,7 @@ export default function App() {
   const [resumeState, setResumeState] = useState(null)
   const [view, setView] = useState('home')
   const [addingToSection, setAddingToSection] = useState(null)
+  const [editingItem, setEditingItem] = useState(null)
   const { savedSession, saveSession, clearSession, consumeSession } = useSessionResume()
   const sessionStateRef = useRef(null)
 
@@ -271,23 +282,39 @@ export default function App() {
   }
 
   if (activeSection) {
+    const isRecent = activeSection.id === 'recent'
     return (
-      <DrillSession
-        key={activeSection.id + (resumeState ? '-resume' : '')}
-        section={activeSection}
-        isDone={isDone}
-        markDone={markDone}
-        unmarkDone={unmarkDone}
-        incrementRep={incrementRep}
-        getRepCount={getRepCount}
-        onBack={leaveSection}
-        startItem={timer.startItem}
-        stopItem={timer.stopItem}
-        getItemElapsed={timer.getItemElapsed}
-        sessionSeconds={timer.sessionSeconds}
-        resumeState={resumeState}
-        onSessionChange={handleSessionChange}
-      />
+      <>
+        <DrillSession
+          key={activeSection.id + (resumeState ? '-resume' : '')}
+          section={activeSection}
+          isDone={isDone}
+          markDone={markDone}
+          unmarkDone={unmarkDone}
+          incrementRep={incrementRep}
+          getRepCount={getRepCount}
+          onBack={leaveSection}
+          startItem={timer.startItem}
+          stopItem={timer.stopItem}
+          getItemElapsed={timer.getItemElapsed}
+          sessionSeconds={timer.sessionSeconds}
+          resumeState={resumeState}
+          onSessionChange={handleSessionChange}
+          onEditItem={(item) => setEditingItem(item)}
+          onDeleteItem={deleteItem}
+          onReorderItems={reorderItems}
+          isRecent={isRecent}
+        />
+        {editingItem && (
+          <EditItemForm
+            item={editingItem}
+            sectionTitle={activeSection.title}
+            onUpdate={updateItem}
+            onDelete={deleteItem}
+            onClose={() => setEditingItem(null)}
+          />
+        )}
+      </>
     )
   }
 
@@ -339,6 +366,15 @@ export default function App() {
           sectionTitle={drillSections.find(s => s.id === addingToSection)?.title || ''}
           onAdd={addItem}
           onClose={() => setAddingToSection(null)}
+        />
+      )}
+      {editingItem && !activeSection && (
+        <EditItemForm
+          item={editingItem}
+          sectionTitle={drillSections.find(s => s.items.some(i => i.id === editingItem.id))?.title || ''}
+          onUpdate={updateItem}
+          onDelete={deleteItem}
+          onClose={() => setEditingItem(null)}
         />
       )}
     </>

@@ -8,7 +8,7 @@ function formatTime(seconds) {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`
 }
 
-export default function DrillFlashcard({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds }) {
+export default function DrillFlashcard({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds, onEditItem }) {
   const getSid = (item) => item.section_id || section.id
   const [index, setIndex] = useState(initialIndex || 0)
   const [, setTick] = useState(0)
@@ -197,12 +197,24 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
         <div className={`w-full p-5 rounded-2xl border text-center transition-all relative
           ${currentIsDone ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-100 bg-gray-50/30'}`}
         >
-          {/* Rep count badge */}
-          {currentReps > 1 && (
-            <span className="absolute top-3 right-3 text-[11px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">
-              x{currentReps}
-            </span>
-          )}
+          {/* Edit + Rep count badge */}
+          <div className="absolute top-3 right-3 flex items-center gap-1.5">
+            {currentReps > 1 && (
+              <span className="text-[11px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">
+                x{currentReps}
+              </span>
+            )}
+            {onEditItem && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEditItem(current) }}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 active:bg-gray-300 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            )}
+          </div>
 
           {current.image_url && (
             <img src={current.image_url} alt="" className="max-h-48 mx-auto rounded-lg mb-3 object-contain" />
