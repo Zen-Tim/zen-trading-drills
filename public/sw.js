@@ -1,41 +1,32 @@
-const CACHE_NAME = 'zen-drills-v1'
-const APP_SHELL = [
-  '/',
-  '/index.html',
-]
+const CACHE_VERSION = '__BUILD_TIME__'
+const CACHE_NAME = `zen-drills-${CACHE_VERSION}`
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
-  )
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(
-        names
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      )
-    )
+      Promise.all(names.map((name) => caches.delete(name)))
+    ).then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
 
+  // Skip non-GET requests
+  if (request.method !== 'GET') return
+
   // Skip API calls — always go to network for data
   if (request.url.includes('/api/')) return
 
-  // For navigation and app shell: network first, fall back to cache
+  // Network-first for everything — only fall back to cache if offline
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // Cache successful responses for app shell assets
-        if (response.ok && request.method === 'GET') {
+        if (response.ok) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
         }
