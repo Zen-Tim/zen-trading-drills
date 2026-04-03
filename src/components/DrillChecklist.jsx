@@ -187,8 +187,8 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
           })}
         </ul>
 
-        {/* New Round button — only in drill mode */}
-        {!manage && (
+        {/* New Round button — only in drill mode, hidden for Recent */}
+        {!manage && !isRecent && (
           <div className="mt-6 flex justify-center">
             <button
               onClick={onNewRound}

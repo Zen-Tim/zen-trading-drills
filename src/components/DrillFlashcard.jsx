@@ -8,7 +8,7 @@ function formatTime(seconds) {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`
 }
 
-export default function DrillFlashcard({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds, onEditItem }) {
+export default function DrillFlashcard({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds, onEditItem, isRecent }) {
   const getSid = (item) => item.section_id || section.id
   const [index, setIndex] = useState(initialIndex || 0)
   const [, setTick] = useState(0)
@@ -141,19 +141,23 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
             <p className="text-sm text-gray-400 mb-8">{formatTime(sessionSeconds)}</p>
           )}
 
-          <button
-            onClick={() => {
-              stopItem()
-              onNewRound()
-              setIndex(0)
-            }}
-            className="w-full max-w-xs h-14 rounded-full bg-gray-900 text-white font-medium text-base active:scale-[0.97] transition-all mb-3"
-          >
-            New Round
-          </button>
+          {!isRecent && (
+            <button
+              onClick={() => {
+                stopItem()
+                onNewRound()
+                setIndex(0)
+              }}
+              className="w-full max-w-xs h-14 rounded-full bg-gray-900 text-white font-medium text-base active:scale-[0.97] transition-all mb-3"
+            >
+              New Round
+            </button>
+          )}
           <button
             onClick={onBack}
-            className="w-full max-w-xs h-14 rounded-full border border-gray-200 text-gray-500 font-medium text-base active:scale-[0.97] transition-all"
+            className={`w-full max-w-xs h-14 rounded-full font-medium text-base active:scale-[0.97] transition-all ${
+              isRecent ? 'bg-gray-900 text-white' : 'border border-gray-200 text-gray-500'
+            }`}
           >
             Done
           </button>
@@ -259,7 +263,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
           <span className="text-sm text-gray-500">Prev</span>
         </button>
 
-        {allDone ? (
+        {allDone && !isRecent ? (
           <button
             onClick={() => {
               stopItem()

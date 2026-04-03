@@ -304,7 +304,7 @@ export function useDrillContent(user) {
       // Batch upsert sort_order values
       const { error: reorderErr } = await supabase
         .from('drill_items')
-        .upsert(updates, { onConflict: 'id' })
+        .upsert(updates, { onConflict: 'id,user_id' })
 
       if (reorderErr) throw reorderErr
 
@@ -329,11 +329,169 @@ export function useDrillContent(user) {
     }
   }, [userId])
 
+  const createSection = useCallback(async (title, subtitle, icon) => {
+    try {
+      const slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      const id = slug + '-' + Date.now()
+
+      // Find max sort_order (excluding Recent which is -1)
+      const maxOrder = sections
+        .filter((s) => s.id !== 'recent')
+        .reduce((max, s) => Math.max(max, s.sort_order), -1)
+
+      const newSection = {
+        id,
+        title,
+        subtitle: subtitle || '',
+        icon: icon || '',
+        sort_order: maxOrder + 1,
+        user_id: userId,
+      }
+
+      const { error: insertErr } = await supabase
+        .from('drill_sections')
+        .insert([newSection])
+
+      if (insertErr) throw insertErr
+
+      const sectionWithItems = { ...newSection, items: [] }
+
+      setSections((prev) => {
+        const hasRecent = prev.length > 0 && prev[0].id === 'recent'
+        if (hasRecent) {
+          return [prev[0], ...prev.slice(1), sectionWithItems]
+        }
+        return [...prev, sectionWithItems]
+      })
+
+      return { success: true, section: sectionWithItems }
+    } catch (err) {
+      return { success: false, error: err.message || String(err) }
+    }
+  }, [userId, sections])
+
+  const updateSection = useCallback(async (sectionId, updates) => {
+    if (sectionId === 'recent') return { success: true }
+
+    try {
+      const { error: updateErr } = await supabase
+        .from('drill_sections')
+        .update(updates)
+        .eq('id', sectionId)
+        .eq('user_id', userId)
+
+      if (updateErr) throw updateErr
+
+      setSections((prev) =>
+        prev.map((s) =>
+          s.id === sectionId ? { ...s, ...updates } : s
+        )
+      )
+
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err.message || String(err) }
+    }
+  }, [userId])
+
+  const deleteSection = useCallback(async (sectionId) => {
+    if (sectionId === 'recent') return { success: true }
+
+    try {
+      // Get all items in this section from local state
+      const section = sections.find((s) => s.id === sectionId)
+      const sectionItems = section?.items || []
+
+      // Delete images from storage in parallel
+      const imageDeletes = sectionItems
+        .filter((i) => i.image_url)
+        .map((i) => {
+          const path = `${userId}/${i.id}.${i.image_url.split('.').pop()}`
+          return supabase.storage.from('drill-images').remove([path]).catch(() => {})
+        })
+      await Promise.all(imageDeletes)
+
+      // Clean up orphaned progress rows
+      await supabase
+        .from('drill_progress')
+        .delete()
+        .eq('user_id', userId)
+        .eq('section_id', sectionId)
+
+      // Delete section (items cascade via DB or delete manually)
+      await supabase
+        .from('drill_items')
+        .delete()
+        .eq('section_id', sectionId)
+        .eq('user_id', userId)
+
+      const { error: delErr } = await supabase
+        .from('drill_sections')
+        .delete()
+        .eq('id', sectionId)
+        .eq('user_id', userId)
+
+      if (delErr) throw delErr
+
+      // Update local state — remove section and clean Recent of items from this section
+      setSections((prev) =>
+        prev
+          .filter((s) => s.id !== sectionId)
+          .map((s) => {
+            if (s.id !== 'recent') return s
+            const filtered = s.items.filter((i) => i.section_id !== sectionId)
+            return { ...s, items: filtered }
+          })
+          .filter((s) => s.id !== 'recent' || s.items.length > 0)
+      )
+
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err.message || String(err) }
+    }
+  }, [userId, sections])
+
+  const reorderSections = useCallback(async (orderedSectionIds) => {
+    try {
+      // Filter out 'recent' — it's virtual
+      const realIds = orderedSectionIds.filter((id) => id !== 'recent')
+
+      // Update all sections in parallel
+      await Promise.all(
+        realIds.map((id, index) =>
+          supabase
+            .from('drill_sections')
+            .update({ sort_order: index })
+            .eq('id', id)
+            .eq('user_id', userId)
+        )
+      )
+
+      // Update local state
+      setSections((prev) => {
+        const hasRecent = prev.length > 0 && prev[0].id === 'recent'
+        const recentSection = hasRecent ? prev[0] : null
+        const sectionMap = new Map(prev.map((s) => [s.id, s]))
+        const reordered = realIds
+          .map((id, index) => {
+            const s = sectionMap.get(id)
+            return s ? { ...s, sort_order: index } : null
+          })
+          .filter(Boolean)
+        return recentSection ? [recentSection, ...reordered] : reordered
+      })
+
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err.message || String(err) }
+    }
+  }, [userId])
+
   const refetch = useCallback(() => {
     setLoading(true)
     setError(null)
     load()
   }, [load])
 
-  return { sections, loading, error, addItem, deleteItem, updateItem, reorderItems, refetch }
+  return { sections, loading, error, addItem, deleteItem, updateItem, reorderItems, createSection, updateSection, deleteSection, reorderSections, refetch }
 }

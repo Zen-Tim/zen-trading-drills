@@ -13,6 +13,7 @@ import Analytics from './components/Analytics'
 import Auth from './components/Auth'
 import AddItemForm from './components/AddItemForm'
 import EditItemForm from './components/EditItemForm'
+import SectionForm from './components/SectionForm'
 import { SessionTimer } from './components/Timer'
 
 function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange, onEditItem, onDeleteItem, onReorderItems, isRecent }) {
@@ -43,16 +44,18 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
 
         <SessionTimer seconds={sessionSeconds} />
 
-        <button
-          onClick={onNewRound}
-          className="ml-auto px-4 min-h-[48px] flex items-center gap-1.5 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-500"
-          title="New Round"
-        >
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 20l5-5M20 4l-5 5" />
-          </svg>
-          New Round
-        </button>
+        {!isRecent && (
+          <button
+            onClick={onNewRound}
+            className="ml-auto px-4 min-h-[48px] flex items-center gap-1.5 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-500"
+            title="New Round"
+          >
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 20l5-5M20 4l-5 5" />
+            </svg>
+            New Round
+          </button>
+        )}
       </div>
 
       {isFlashcard ? (
@@ -73,6 +76,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           onIndexChange={onIndexChange}
           sessionSeconds={sessionSeconds}
           onEditItem={onEditItem}
+          isRecent={isRecent}
         />
       ) : (
         <DrillChecklist
@@ -180,7 +184,7 @@ function BottomNav({ view, onNavigate }) {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
-  const { sections: drillSections, loading: contentLoading, error: contentError, addItem, deleteItem, updateItem, reorderItems, refetch: refetchContent } = useDrillContent(user)
+  const { sections: drillSections, loading: contentLoading, error: contentError, addItem, deleteItem, updateItem, reorderItems, createSection, updateSection, deleteSection, reorderSections, refetch: refetchContent } = useDrillContent(user)
   const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useSupabaseProgress(user)
 
   const totalItems = drillSections.reduce((sum, s) => sum + s.items.length, 0)
@@ -193,6 +197,8 @@ export default function App() {
   const [view, setView] = useState('home')
   const [addingToSection, setAddingToSection] = useState(null)
   const [editingItem, setEditingItem] = useState(null)
+  const [editingSection, setEditingSection] = useState(null)
+  const [creatingSectionMode, setCreatingSectionMode] = useState(false)
   const { savedSession, saveSession, clearSession, consumeSession } = useSessionResume()
   const sessionStateRef = useRef(null)
 
@@ -338,6 +344,9 @@ export default function App() {
             onResume={handleResume}
             onStartFresh={handleStartFresh}
             onAddItem={(sectionId) => setAddingToSection(sectionId)}
+            onEditSection={(section) => setEditingSection(section)}
+            onCreateSection={() => setCreatingSectionMode(true)}
+            onReorderSections={reorderSections}
           />
         )}
         {view === 'heatmap' && (
@@ -375,6 +384,26 @@ export default function App() {
           onUpdate={updateItem}
           onDelete={deleteItem}
           onClose={() => setEditingItem(null)}
+        />
+      )}
+      {editingSection && (
+        <SectionForm
+          section={editingSection}
+          onSave={updateSection}
+          onDelete={async (sectionId) => {
+            const result = await deleteSection(sectionId)
+            if (result.success && activeSection?.id === sectionId) {
+              leaveSection()
+            }
+            return result
+          }}
+          onClose={() => setEditingSection(null)}
+        />
+      )}
+      {creatingSectionMode && (
+        <SectionForm
+          onSave={createSection}
+          onClose={() => setCreatingSectionMode(false)}
         />
       )}
     </>
