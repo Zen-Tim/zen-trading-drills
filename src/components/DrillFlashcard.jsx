@@ -9,6 +9,7 @@ function formatTime(seconds) {
 }
 
 export default function DrillFlashcard({ section, items, isDone, markDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds }) {
+  const getSid = (item) => item.section_id || section.id
   const [index, setIndex] = useState(initialIndex || 0)
   const [, setTick] = useState(0)
   const [showAgain, setShowAgain] = useState(false)
@@ -22,10 +23,10 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
   }, [index, onIndexChange])
 
   const current = items[index]
-  const doneCount = items.filter((item) => isDone(section.id, item.id)).length
+  const doneCount = items.filter((item) => isDone(getSid(item), item.id)).length
   const allDone = doneCount === items.length && items.length > 0
-  const currentIsDone = current ? isDone(section.id, current.id) : false
-  const currentReps = current ? getRepCount(section.id, current.id) : 0
+  const currentIsDone = current ? isDone(getSid(current), current.id) : false
+  const currentReps = current ? getRepCount(getSid(current), current.id) : 0
 
   // Start timer for current item
   useEffect(() => {
@@ -81,14 +82,14 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
   }
 
   function handleAgain() {
-    incrementRep(section.id, current.id)
+    incrementRep(getSid(current), current.id)
     setPlusOneKey((k) => k + 1)
     hideAgain()
   }
 
   // All done state — show completion summary
   if (allDone && index >= items.length - 1) {
-    const totalReps = items.reduce((sum, item) => sum + getRepCount(section.id, item.id), 0)
+    const totalReps = items.reduce((sum, item) => sum + getRepCount(getSid(item), item.id), 0)
 
     return (
       <div className="flex-1 flex flex-col max-w-lg mx-auto w-full">
@@ -243,7 +244,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
           <button
             onClick={() => {
               if (!currentIsDone) {
-                markDone(section.id, current.id)
+                markDone(getSid(current), current.id)
                 showAgainButton()
               } else {
                 stopItem()

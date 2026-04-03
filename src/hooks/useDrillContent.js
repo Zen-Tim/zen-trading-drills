@@ -79,12 +79,44 @@ export function useDrillContent(user) {
       if (itemErr) throw itemErr
 
       // Assemble into drills.json shape
-      const assembled = sectionRows.map((s) => ({
+      let assembled = sectionRows.map((s) => ({
         ...s,
         items: (itemRows || [])
           .filter((i) => i.section_id === s.id)
           .sort((a, b) => a.sort_order - b.sort_order),
       }))
+
+      // Build virtual "Recent" section from non-seeded items
+      const allItems = assembled.flatMap((s) => s.items)
+      if (allItems.length > 0) {
+        const timestamps = allItems
+          .map((i) => i.created_at ? new Date(i.created_at).getTime() : 0)
+          .filter((t) => t > 0)
+
+        if (timestamps.length > 0) {
+          const earliest = Math.min(...timestamps)
+          const cutoff = earliest + 60000 // 60 seconds after earliest = after seed batch
+
+          const recentItems = allItems
+            .filter((i) => i.created_at && new Date(i.created_at).getTime() > cutoff)
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .map((i) => ({ ...i })) // shallow copy
+
+          if (recentItems.length > 0) {
+            assembled = [
+              {
+                id: 'recent',
+                title: 'Recent',
+                subtitle: 'Recently added',
+                icon: '\u{1F195}',
+                sort_order: -1,
+                items: recentItems,
+              },
+              ...assembled,
+            ]
+          }
+        }
+      }
 
       setSections(assembled)
       setLoading(false)

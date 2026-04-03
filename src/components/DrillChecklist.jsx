@@ -1,16 +1,35 @@
+import { useState, useRef, useEffect } from 'react'
 import ProgressBar from './ProgressBar'
 
 export default function DrillChecklist({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound }) {
-  const doneCount = items.filter((item) => isDone(section.id, item.id)).length
+  const getSid = (item) => item.section_id || section.id
+
+  const doneCount = items.filter((item) => isDone(getSid(item), item.id)).length
   const allDone = doneCount === items.length && items.length > 0
 
+  const [lastAction, setLastAction] = useState(null)
+  const undoTimerRef = useRef(null)
+
+  useEffect(() => () => clearTimeout(undoTimerRef.current), [])
+
   function handleItemClick(item) {
-    if (isDone(section.id, item.id)) {
-      // Already done — increment rep count
-      incrementRep(section.id, item.id)
+    const sid = getSid(item)
+    if (isDone(sid, item.id)) {
+      incrementRep(sid, item.id)
+      setLastAction({ type: 'incrementRep', sectionId: sid, itemId: item.id, timestamp: Date.now() })
     } else {
-      markDone(section.id, item.id)
+      markDone(sid, item.id)
+      setLastAction({ type: 'markDone', sectionId: sid, itemId: item.id, timestamp: Date.now() })
     }
+    clearTimeout(undoTimerRef.current)
+    undoTimerRef.current = setTimeout(() => setLastAction(null), 3000)
+  }
+
+  function handleUndo() {
+    if (!lastAction) return
+    unmarkDone(lastAction.sectionId, lastAction.itemId)
+    setLastAction(null)
+    clearTimeout(undoTimerRef.current)
   }
 
   return (
@@ -40,8 +59,8 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
       <div className="px-4 pb-12">
         <ul className="space-y-1">
           {items.map((item) => {
-            const done = isDone(section.id, item.id)
-            const reps = getRepCount(section.id, item.id)
+            const done = isDone(getSid(item), item.id)
+            const reps = getRepCount(getSid(item), item.id)
 
             return (
               <li key={item.id}>
@@ -99,6 +118,21 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
           </button>
         </div>
       </div>
+
+      {/* Undo toast */}
+      {lastAction && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <button
+            onClick={handleUndo}
+            className="flex items-center gap-2 px-5 py-3 rounded-full bg-gray-900 text-white text-sm font-medium shadow-lg active:scale-[0.97] transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4" />
+            </svg>
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   )
 }
