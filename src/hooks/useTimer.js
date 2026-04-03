@@ -15,14 +15,15 @@ export function useTimer(token) {
 
   // Load persisted timer data on mount
   useEffect(() => {
-    fetch(`/api/progress?token=${token}&type=timer&date=${date}`)
-      .then((r) => r.json())
-      .then((data) => {
+    try {
+      const raw = localStorage.getItem(`zen-timer-${date}`)
+      if (raw) {
+        const data = JSON.parse(raw)
         if (data.sessionSeconds) setSessionSeconds(data.sessionSeconds)
         if (data.items) setItemTimes(data.items)
-      })
-      .catch(() => {})
-  }, [token, date])
+      }
+    } catch {}
+  }, [date])
 
   // Session timer: tick every second while in a drill section
   const startSession = useCallback(() => {
@@ -74,25 +75,17 @@ export function useTimer(token) {
     return stored
   }, [itemTimes, activeItemId])
 
-  // Persist timer data to KV
+  // Persist timer data to localStorage
   const saveTimer = useCallback(() => {
-    let items = { ...itemTimes }
-    if (activeItemId && itemStartRef.current) {
-      const elapsed = Math.round((Date.now() - itemStartRef.current) / 1000)
-      items[activeItemId] = (items[activeItemId] || 0) + elapsed
-    }
-
-    fetch('/api/progress', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token,
-        type: 'timer',
-        date,
-        data: { sessionSeconds, items },
-      }),
-    }).catch(() => {})
-  }, [token, date, sessionSeconds, itemTimes, activeItemId])
+    try {
+      let items = { ...itemTimes }
+      if (activeItemId && itemStartRef.current) {
+        const elapsed = Math.round((Date.now() - itemStartRef.current) / 1000)
+        items[activeItemId] = (items[activeItemId] || 0) + elapsed
+      }
+      localStorage.setItem(`zen-timer-${date}`, JSON.stringify({ sessionSeconds, items }))
+    } catch {}
+  }, [date, sessionSeconds, itemTimes, activeItemId])
 
   // Auto-save every 30 seconds
   useEffect(() => {

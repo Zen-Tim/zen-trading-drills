@@ -18,6 +18,13 @@ export function useSupabaseProgress(user) {
   const date = getToday()
   const userId = user?.id
 
+  // Handle no-user case — clear loading so Auth screen can show
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false)
+    }
+  }, [userId])
+
   // Load all data on mount
   useEffect(() => {
     if (!userId) return
