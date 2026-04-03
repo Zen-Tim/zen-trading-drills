@@ -1,11 +1,13 @@
 import ProgressBar from './ProgressBar'
 
-export default function DrillChecklist({ section, items, isDone, markDone, unmarkDone, onBack }) {
+export default function DrillChecklist({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound }) {
   const doneCount = items.filter((item) => isDone(section.id, item.id)).length
+  const allDone = doneCount === items.length && items.length > 0
 
-  function toggleItem(item) {
+  function handleItemClick(item) {
     if (isDone(section.id, item.id)) {
-      unmarkDone(section.id, item.id)
+      // Already done — increment rep count
+      incrementRep(section.id, item.id)
     } else {
       markDone(section.id, item.id)
     }
@@ -39,11 +41,12 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
         <ul className="space-y-1">
           {items.map((item) => {
             const done = isDone(section.id, item.id)
+            const reps = getRepCount(section.id, item.id)
 
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => toggleItem(item)}
+                  onClick={() => handleItemClick(item)}
                   className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-all active:scale-[0.98]
                     ${done ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
                 >
@@ -64,11 +67,30 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
                   >
                     {item.text}
                   </span>
+
+                  {/* Rep count badge (only show x2+) */}
+                  {reps > 1 && (
+                    <span className="text-[11px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                      x{reps}
+                    </span>
+                  )}
                 </button>
               </li>
             )
           })}
         </ul>
+
+        {/* New Round button when all done */}
+        {allDone && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={onNewRound}
+              className="px-6 h-11 rounded-full bg-gray-900 text-white font-medium text-sm active:scale-[0.97] transition-all"
+            >
+              New Round
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

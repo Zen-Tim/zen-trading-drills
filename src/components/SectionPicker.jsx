@@ -1,7 +1,7 @@
 import ProgressBar from './ProgressBar'
 import { SessionTimer } from './Timer'
 
-export default function SectionPicker({ sections, sectionProgress, totalDone, totalItems, streak, onSelectSection, sessionSeconds }) {
+export default function SectionPicker({ sections, sectionProgress, totalDone, totalReps, totalItems, streak, onSelectSection, sessionSeconds, getRepCount, getUniqueCount }) {
   return (
     <div className="min-h-screen bg-white px-4 pt-6 pb-12 max-w-lg mx-auto">
       {/* Header */}
@@ -26,11 +26,16 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
         )}
       </div>
 
-      {/* Overall progress */}
+      {/* Overall progress (unique items) */}
       <div className="mb-8">
         <div className="flex justify-between items-baseline mb-2">
           <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Today</span>
-          <span className="text-xs text-gray-400">{totalDone} / {totalItems}</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs text-gray-400">{totalDone} / {totalItems}</span>
+            {totalReps > totalDone && (
+              <span className="text-[11px] text-gray-300">{totalReps} reps</span>
+            )}
+          </div>
         </div>
         <ProgressBar done={totalDone} total={totalItems} />
       </div>
@@ -40,6 +45,9 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
         {sections.map((section) => {
           const { done, total } = sectionProgress(section.id, section.items.length)
           const complete = done === total && total > 0
+
+          // Calculate total reps for this section
+          const sectionReps = section.items.reduce((sum, item) => sum + getRepCount(section.id, item.id), 0)
 
           return (
             <button
@@ -61,6 +69,9 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
                   {done}/{total}
                 </span>
               </div>
+              {sectionReps > done && (
+                <div className="mt-1 text-[11px] text-gray-300 text-right">{sectionReps} reps</div>
+              )}
             </button>
           )
         })}

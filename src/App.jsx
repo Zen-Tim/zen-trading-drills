@@ -12,7 +12,7 @@ import { SessionTimer } from './components/Timer'
 
 const totalItems = drillsData.sections.reduce((sum, s) => sum + s.items.length, 0)
 
-function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBack, onReshuffle, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds }) {
+function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds }) {
   const isFlashcard = mode === 'flashcard'
 
   return (
@@ -41,13 +41,14 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
         <SessionTimer seconds={sessionSeconds} />
 
         <button
-          onClick={onReshuffle}
-          className="ml-auto w-11 h-11 flex items-center justify-center rounded-lg hover:bg-gray-50 active:bg-gray-100"
-          title="Reshuffle"
+          onClick={onNewRound}
+          className="ml-auto px-3 h-9 flex items-center gap-1.5 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-xs font-medium text-gray-500"
+          title="New Round"
         >
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 20l5-5M20 4l-5 5" />
           </svg>
+          New Round
         </button>
       </div>
 
@@ -57,7 +58,10 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           items={shuffledItems}
           isDone={isDone}
           markDone={markDone}
+          incrementRep={incrementRep}
+          getRepCount={getRepCount}
           onBack={onBack}
+          onNewRound={onNewRound}
           startItem={startItem}
           stopItem={stopItem}
           getItemElapsed={getItemElapsed}
@@ -69,14 +73,17 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, onBac
           isDone={isDone}
           markDone={markDone}
           unmarkDone={unmarkDone}
+          incrementRep={incrementRep}
+          getRepCount={getRepCount}
           onBack={onBack}
+          onNewRound={onNewRound}
         />
       )}
     </div>
   )
 }
 
-function DrillSession({ section, isDone, markDone, unmarkDone, onBack, startItem, stopItem, getItemElapsed, sessionSeconds }) {
+function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds }) {
   const [mode, setMode] = useState('flashcard')
   const { shuffled, reshuffle } = useShuffle(section.items)
 
@@ -88,8 +95,11 @@ function DrillSession({ section, isDone, markDone, unmarkDone, onBack, startItem
       isDone={isDone}
       markDone={markDone}
       unmarkDone={unmarkDone}
+      incrementRep={incrementRep}
+      getRepCount={getRepCount}
       onBack={onBack}
       onReshuffle={reshuffle}
+      onNewRound={reshuffle}
       shuffledItems={shuffled}
       startItem={startItem}
       stopItem={stopItem}
@@ -139,7 +149,10 @@ function BottomNav({ view, onNavigate }) {
 }
 
 export default function App() {
-  const { token, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone } = useProgress()
+  const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount } = useProgress()
+
+  // Unique items done across all sections (for home progress bar)
+  const uniqueDone = drillsData.sections.reduce((sum, s) => sum + getUniqueCount(s.id), 0)
   const timer = useTimer(token)
   const [activeSection, setActiveSection] = useState(null)
   const [view, setView] = useState('home')
@@ -172,6 +185,8 @@ export default function App() {
         isDone={isDone}
         markDone={markDone}
         unmarkDone={unmarkDone}
+        incrementRep={incrementRep}
+        getRepCount={getRepCount}
         onBack={leaveSection}
         startItem={timer.startItem}
         stopItem={timer.stopItem}
@@ -188,11 +203,14 @@ export default function App() {
           <SectionPicker
             sections={drillsData.sections}
             sectionProgress={sectionProgress}
-            totalDone={totalDone}
+            totalDone={uniqueDone}
+            totalReps={totalDone}
             totalItems={totalItems}
             streak={streak}
             onSelectSection={enterSection}
             sessionSeconds={timer.sessionSeconds}
+            getRepCount={getRepCount}
+            getUniqueCount={getUniqueCount}
           />
         )}
         {view === 'heatmap' && (

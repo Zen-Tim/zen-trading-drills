@@ -2,14 +2,19 @@ import { useState, useRef, useEffect } from 'react'
 import ProgressBar from './ProgressBar'
 import { ItemTimer } from './Timer'
 
-export default function DrillFlashcard({ section, items, isDone, markDone, onBack, startItem, stopItem, getItemElapsed }) {
+export default function DrillFlashcard({ section, items, isDone, markDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed }) {
   const [index, setIndex] = useState(0)
   const [, setTick] = useState(0)
+  const [showAgain, setShowAgain] = useState(false)
+  const [plusOneKey, setPlusOneKey] = useState(0)
   const touchStart = useRef(null)
+  const againTimer = useRef(null)
 
   const current = items[index]
   const doneCount = items.filter((item) => isDone(section.id, item.id)).length
+  const allDone = doneCount === items.length && items.length > 0
   const currentIsDone = current ? isDone(section.id, current.id) : false
+  const currentReps = current ? getRepCount(section.id, current.id) : 0
 
   // Start timer for current item
   useEffect(() => {
@@ -22,11 +27,31 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
     return () => clearInterval(id)
   }, [])
 
+  // Clear again timer on unmount or card change
+  useEffect(() => {
+    return () => {
+      if (againTimer.current) clearTimeout(againTimer.current)
+    }
+  }, [index])
+
+  function showAgainButton() {
+    setShowAgain(true)
+    if (againTimer.current) clearTimeout(againTimer.current)
+    againTimer.current = setTimeout(() => setShowAgain(false), 3000)
+  }
+
+  function hideAgain() {
+    setShowAgain(false)
+    if (againTimer.current) clearTimeout(againTimer.current)
+  }
+
   function next() {
+    hideAgain()
     if (index < items.length - 1) setIndex(index + 1)
   }
 
   function prev() {
+    hideAgain()
     if (index > 0) setIndex(index - 1)
   }
 
@@ -42,6 +67,27 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
       else next()
     }
     touchStart.current = null
+  }
+
+  function handleAgain() {
+    incrementRep(section.id, current.id)
+    setPlusOneKey((k) => k + 1)
+    hideAgain()
+  }
+
+  // All done state — show New Round
+  if (allDone && !current) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        <p className="text-lg font-medium text-gray-800 mb-4">All items drilled!</p>
+        <button
+          onClick={onNewRound}
+          className="px-6 h-12 rounded-full bg-gray-900 text-white font-medium text-sm active:scale-[0.97] transition-all"
+        >
+          New Round
+        </button>
+      </div>
+    )
   }
 
   if (!current) return null
@@ -76,18 +122,45 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <div className={`w-full p-5 rounded-2xl border text-center transition-all
+        <div className={`w-full p-5 rounded-2xl border text-center transition-all relative
           ${currentIsDone ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-100 bg-gray-50/30'}`}
         >
+          {/* Rep count badge */}
+          {currentReps > 1 && (
+            <span className="absolute top-3 right-3 text-[11px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">
+              x{currentReps}
+            </span>
+          )}
+
           <p className="text-lg font-medium text-gray-800 leading-relaxed">{current.text}</p>
+
           {currentIsDone && (
             <span className="inline-block mt-2 text-xs font-medium text-emerald-500 uppercase tracking-wide">Done</span>
+          )}
+
+          {/* +1 animation */}
+          {plusOneKey > 0 && (
+            <span key={plusOneKey} className="plus-one absolute top-3 left-1/2 -translate-x-1/2 text-sm font-semibold text-emerald-500">
+              +1
+            </span>
           )}
         </div>
       </div>
 
+      {/* Again button (appears after marking done) */}
+      <div className="h-10 flex items-center justify-center">
+        {showAgain && currentIsDone && (
+          <button
+            onClick={handleAgain}
+            className="again-btn px-4 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          >
+            Again
+          </button>
+        )}
+      </div>
+
       {/* Bottom controls */}
-      <div className="px-4 pb-4 pt-2 flex items-center gap-3">
+      <div className="px-4 pb-4 pt-1 flex items-center gap-3">
         <button
           onClick={prev}
           disabled={index === 0}
@@ -98,20 +171,37 @@ export default function DrillFlashcard({ section, items, isDone, markDone, onBac
           </svg>
         </button>
 
-        <button
-          onClick={() => {
-            if (!currentIsDone) markDone(section.id, current.id)
-            stopItem()
-            next()
-          }}
-          className={`flex-1 h-12 rounded-full font-medium text-sm transition-all active:scale-[0.97]
-            ${currentIsDone
-              ? 'bg-gray-100 text-gray-500'
-              : 'bg-gray-900 text-white'
-            }`}
-        >
-          {currentIsDone ? 'Next' : 'Mark Done'}
-        </button>
+        {allDone ? (
+          <button
+            onClick={() => {
+              stopItem()
+              onNewRound()
+              setIndex(0)
+            }}
+            className="flex-1 h-12 rounded-full font-medium text-sm transition-all active:scale-[0.97] bg-gray-900 text-white"
+          >
+            New Round
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              if (!currentIsDone) {
+                markDone(section.id, current.id)
+                showAgainButton()
+              } else {
+                stopItem()
+                next()
+              }
+            }}
+            className={`flex-1 h-12 rounded-full font-medium text-sm transition-all active:scale-[0.97]
+              ${currentIsDone
+                ? 'bg-gray-100 text-gray-500'
+                : 'bg-gray-900 text-white'
+              }`}
+          >
+            {currentIsDone ? 'Next' : 'Mark Done'}
+          </button>
+        )}
 
         <button
           onClick={next}
