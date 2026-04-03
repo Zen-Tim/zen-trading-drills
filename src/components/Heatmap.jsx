@@ -24,8 +24,17 @@ function getColor(count, max) {
   return '#216e39'
 }
 
-export default function Heatmap({ heatmap }) {
+export default function Heatmap({ heatmap, todayCount, todayKey }) {
   const [tooltip, setTooltip] = useState(null)
+
+  // Merge live today count into heatmap data so the grid reflects the current session
+  const mergedHeatmap = useMemo(() => {
+    if (todayKey == null || todayCount == null) return heatmap
+    const merged = { ...heatmap }
+    // Use whichever is higher: KV value or live local count
+    merged[todayKey] = Math.max(merged[todayKey] || 0, todayCount)
+    return merged
+  }, [heatmap, todayCount, todayKey])
 
   const { grid, monthLabels, maxCount, totalDays, totalItems } = useMemo(() => {
     const today = new Date()
@@ -52,7 +61,7 @@ export default function Heatmap({ heatmap }) {
         if (d > today) continue
 
         const key = dateToStr(d)
-        const count = heatmap[key] || 0
+        const count = mergedHeatmap[key] || 0
         if (count > max) max = count
         if (count > 0) { days++; items += count }
 
@@ -67,7 +76,7 @@ export default function Heatmap({ heatmap }) {
     }
 
     return { grid: cells, monthLabels: months, maxCount: max || 1, totalDays: days, totalItems: items }
-  }, [heatmap])
+  }, [mergedHeatmap])
 
   const LEFT_PAD = 32
   const TOP_PAD = 20

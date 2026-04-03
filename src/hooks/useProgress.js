@@ -306,6 +306,29 @@ export function useProgress() {
     0
   )
 
+  const refetch = useCallback(async () => {
+    try {
+      const [streakRes, heatmapRes, analyticsRes, timerRes] = await Promise.all([
+        fetch(`/api/progress?token=${token}&type=streak`),
+        fetch(`/api/progress?token=${token}&type=heatmap`),
+        fetch(`/api/progress?token=${token}&type=analytics`),
+        fetch(`/api/progress?token=${token}&type=timer&date=${date}`),
+      ])
+      const [streakData, heatmapData, analyticsData, timerDataRes] = await Promise.all([
+        streakRes.json(),
+        heatmapRes.json(),
+        analyticsRes.json(),
+        timerRes.json(),
+      ])
+      setStreak(streakData)
+      setHeatmap(heatmapData)
+      setAnalytics(analyticsData)
+      setTimerData(timerDataRes)
+    } catch (err) {
+      console.error('Failed to refetch data:', err)
+    }
+  }, [token, date])
+
   return {
     token,
     progress,
@@ -323,5 +346,6 @@ export function useProgress() {
     sectionProgress,
     totalDone,
     date,
+    refetch,
   }
 }

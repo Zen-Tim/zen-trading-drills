@@ -167,7 +167,7 @@ function BottomNav({ view, onNavigate }) {
 }
 
 export default function App() {
-  const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount } = useProgress()
+  const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useProgress()
 
   // Unique items done across all sections (for home progress bar)
   const uniqueDone = drillsData.sections.reduce((sum, s) => sum + getUniqueCount(s.id), 0)
@@ -177,6 +177,14 @@ export default function App() {
   const [view, setView] = useState('home')
   const { savedSession, saveSession, clearSession, consumeSession } = useSessionResume()
   const sessionStateRef = useRef(null)
+
+  // Refetch KV data when switching to activity or analytics tabs
+  const handleNavigate = useCallback((newView) => {
+    setView(newView)
+    if (newView === 'heatmap' || newView === 'analytics') {
+      refetch()
+    }
+  }, [refetch])
 
   // Resolve saved session's sectionId to the actual section object
   const savedSectionObj = savedSession
@@ -282,7 +290,7 @@ export default function App() {
           />
         )}
         {view === 'heatmap' && (
-          <Heatmap heatmap={heatmap} />
+          <Heatmap heatmap={heatmap} todayCount={totalDone} todayKey={date} />
         )}
         {view === 'analytics' && (
           <Analytics
@@ -293,7 +301,7 @@ export default function App() {
           />
         )}
       </div>
-      <BottomNav view={view} onNavigate={setView} />
+      <BottomNav view={view} onNavigate={handleNavigate} />
     </>
   )
 }
