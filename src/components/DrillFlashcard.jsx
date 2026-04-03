@@ -266,6 +266,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
                 showAgainButton()
                 showUndoToast(getSid(current), current.id)
               } else {
+                incrementRep(getSid(current), current.id)
                 stopItem()
                 next()
               }
@@ -276,7 +277,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
                 : 'bg-gray-900 text-white'
               }`}
           >
-            {currentIsDone ? 'Next' : 'Mark Done'}
+            {currentIsDone ? '+1 Rep' : 'Mark Done'}
           </button>
         )}
 
