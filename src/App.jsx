@@ -68,6 +68,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           getItemElapsed={getItemElapsed}
           initialIndex={initialIndex}
           onIndexChange={onIndexChange}
+          sessionSeconds={sessionSeconds}
         />
       ) : (
         <DrillChecklist

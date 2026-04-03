@@ -2,7 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import ProgressBar from './ProgressBar'
 import { ItemTimer } from './Timer'
 
-export default function DrillFlashcard({ section, items, isDone, markDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange }) {
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`
+}
+
+export default function DrillFlashcard({ section, items, isDone, markDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds }) {
   const [index, setIndex] = useState(initialIndex || 0)
   const [, setTick] = useState(0)
   const [showAgain, setShowAgain] = useState(false)
@@ -80,17 +86,59 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
     hideAgain()
   }
 
-  // All done state — show New Round
-  if (allDone && !current) {
+  // All done state — show completion summary
+  if (allDone && index >= items.length - 1) {
+    const totalReps = items.reduce((sum, item) => sum + getRepCount(section.id, item.id), 0)
+
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4">
-        <p className="text-lg font-medium text-gray-800 mb-4">All items drilled!</p>
-        <button
-          onClick={onNewRound}
-          className="w-full max-w-xs h-14 rounded-full bg-gray-900 text-white font-medium text-base active:scale-[0.97] transition-all"
-        >
-          New Round
-        </button>
+      <div className="flex-1 flex flex-col max-w-lg mx-auto w-full">
+        {/* Top bar */}
+        <div className="px-4 pt-1 pb-1 flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full hover:bg-gray-50 active:bg-gray-100 -ml-2"
+          >
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-medium text-gray-900 truncate">{section.icon} {section.title}</div>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div className="px-4 pb-2">
+          <ProgressBar done={doneCount} total={items.length} />
+        </div>
+
+        {/* Summary */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4">
+          <p className="text-xl font-semibold text-gray-800 mb-2">All items drilled!</p>
+          <p className="text-sm text-gray-500 mb-1">
+            {doneCount}/{items.length} done{totalReps > doneCount ? ` · ${totalReps} reps` : ''}
+          </p>
+          {sessionSeconds > 0 && (
+            <p className="text-sm text-gray-400 mb-8">{formatTime(sessionSeconds)}</p>
+          )}
+
+          <button
+            onClick={() => {
+              stopItem()
+              onNewRound()
+              setIndex(0)
+            }}
+            className="w-full max-w-xs h-14 rounded-full bg-gray-900 text-white font-medium text-base active:scale-[0.97] transition-all mb-3"
+          >
+            New Round
+          </button>
+          <button
+            onClick={onBack}
+            className="w-full max-w-xs h-14 rounded-full border border-gray-200 text-gray-500 font-medium text-base active:scale-[0.97] transition-all"
+          >
+            Done
+          </button>
+        </div>
       </div>
     )
   }

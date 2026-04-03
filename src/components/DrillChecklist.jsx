@@ -80,17 +80,19 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
           })}
         </ul>
 
-        {/* New Round button when all done */}
-        {allDone && (
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={onNewRound}
-              className="w-full max-w-xs h-14 rounded-full bg-gray-900 text-white font-medium text-base active:scale-[0.97] transition-all"
-            >
-              New Round
-            </button>
-          </div>
-        )}
+        {/* New Round button — always visible */}
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={onNewRound}
+            className={`w-full max-w-xs h-14 rounded-full font-medium text-base active:scale-[0.97] transition-all
+              ${allDone
+                ? 'bg-gray-900 text-white'
+                : 'border border-gray-200 text-gray-500'
+              }`}
+          >
+            New Round
+          </button>
+        </div>
       </div>
     </div>
   )
