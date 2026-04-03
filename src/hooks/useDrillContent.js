@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import drillsData from '../data/drills.json'
 
@@ -16,98 +16,186 @@ export function useDrillContent(user) {
     }
   }, [userId])
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!userId) return
 
-    let cancelled = false
+    try {
+      // Load sections
+      const { data: sectionRows, error: secErr } = await supabase
+        .from('drill_sections')
+        .select('*')
+        .eq('user_id', userId)
+        .order('sort_order')
 
-    async function load() {
-      try {
-        // Load sections
-        const { data: sectionRows, error: secErr } = await supabase
-          .from('drill_sections')
-          .select('*')
-          .eq('user_id', userId)
-          .order('sort_order')
+      if (secErr) throw secErr
 
-        if (secErr) throw secErr
-        if (cancelled) return
-
-        // If empty — first login, seed from drills.json
-        if (!sectionRows || sectionRows.length === 0) {
-          const seedSections = drillsData.sections.map((s, i) => ({
-            id: s.id,
-            title: s.title,
-            subtitle: s.subtitle,
-            icon: s.icon,
-            sort_order: i,
-            user_id: userId,
-          }))
-
-          const { error: seedSecErr } = await supabase
-            .from('drill_sections')
-            .insert(seedSections)
-
-          if (seedSecErr) throw seedSecErr
-
-          const seedItems = []
-          drillsData.sections.forEach((s) => {
-            s.items.forEach((item, itemIndex) => {
-              seedItems.push({
-                id: item.id,
-                section_id: s.id,
-                text: item.text,
-                sort_order: itemIndex,
-                user_id: userId,
-              })
-            })
-          })
-
-          const { error: seedItemErr } = await supabase
-            .from('drill_items')
-            .insert(seedItems)
-
-          if (seedItemErr) throw seedItemErr
-          if (cancelled) return
-
-          // Re-query after seeding
-          return load()
-        }
-
-        // Load items
-        const { data: itemRows, error: itemErr } = await supabase
-          .from('drill_items')
-          .select('*')
-          .eq('user_id', userId)
-          .order('sort_order')
-
-        if (itemErr) throw itemErr
-        if (cancelled) return
-
-        // Assemble into drills.json shape
-        const assembled = sectionRows.map((s) => ({
-          ...s,
-          items: (itemRows || [])
-            .filter((i) => i.section_id === s.id)
-            .sort((a, b) => a.sort_order - b.sort_order),
+      // If empty — first login, seed from drills.json
+      if (!sectionRows || sectionRows.length === 0) {
+        const seedSections = drillsData.sections.map((s, i) => ({
+          id: s.id,
+          title: s.title,
+          subtitle: s.subtitle,
+          icon: s.icon,
+          sort_order: i,
+          user_id: userId,
         }))
 
-        setSections(assembled)
-        setLoading(false)
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message || String(err))
-          setLoading(false)
-        }
+        const { error: seedSecErr } = await supabase
+          .from('drill_sections')
+          .insert(seedSections)
+
+        if (seedSecErr) throw seedSecErr
+
+        const seedItems = []
+        drillsData.sections.forEach((s) => {
+          s.items.forEach((item, itemIndex) => {
+            seedItems.push({
+              id: item.id,
+              section_id: s.id,
+              text: item.text,
+              sort_order: itemIndex,
+              user_id: userId,
+            })
+          })
+        })
+
+        const { error: seedItemErr } = await supabase
+          .from('drill_items')
+          .insert(seedItems)
+
+        if (seedItemErr) throw seedItemErr
+
+        // Re-query after seeding
+        return load()
       }
-    }
 
-    load()
+      // Load items
+      const { data: itemRows, error: itemErr } = await supabase
+        .from('drill_items')
+        .select('*')
+        .eq('user_id', userId)
+        .order('sort_order')
 
-    return () => {
-      cancelled = true
+      if (itemErr) throw itemErr
+
+      // Assemble into drills.json shape
+      const assembled = sectionRows.map((s) => ({
+        ...s,
+        items: (itemRows || [])
+          .filter((i) => i.section_id === s.id)
+          .sort((a, b) => a.sort_order - b.sort_order),
+      }))
+
+      setSections(assembled)
+      setLoading(false)
+    } catch (err) {
+      setError(err.message || String(err))
+      setLoading(false)
     }
   }, [userId])
 
-  return { sections, loading, error }
+  useEffect(() => {
+    if (!userId) return
+    load()
+  }, [userId, load])
+
+  const addItem = useCallback(async (sectionId, text, imageFile) => {
+    try {
+      const itemId = sectionId + '-' + Date.now()
+      let imageUrl = null
+
+      if (imageFile) {
+        const ext = imageFile.name.split('.').pop()
+        const path = `${userId}/${itemId}.${ext}`
+        const { error: uploadErr } = await supabase.storage
+          .from('drill-images')
+          .upload(path, imageFile)
+
+        if (uploadErr) throw uploadErr
+
+        const { data: urlData } = supabase.storage
+          .from('drill-images')
+          .getPublicUrl(path)
+
+        imageUrl = urlData.publicUrl
+      }
+
+      // Find max sort_order for this section
+      const currentSection = sections.find((s) => s.id === sectionId)
+      const maxOrder = currentSection?.items?.length
+        ? Math.max(...currentSection.items.map((i) => i.sort_order))
+        : -1
+
+      const newItem = {
+        id: itemId,
+        section_id: sectionId,
+        text,
+        image_url: imageUrl,
+        sort_order: maxOrder + 1,
+        user_id: userId,
+      }
+
+      const { error: insertErr } = await supabase
+        .from('drill_items')
+        .insert([newItem])
+
+      if (insertErr) throw insertErr
+
+      // Update local state
+      setSections((prev) =>
+        prev.map((s) =>
+          s.id === sectionId
+            ? { ...s, items: [...s.items, newItem] }
+            : s
+        )
+      )
+
+      return { success: true, item: newItem }
+    } catch (err) {
+      return { success: false, error: err.message || String(err) }
+    }
+  }, [userId, sections])
+
+  const deleteItem = useCallback(async (sectionId, itemId) => {
+    try {
+      // Find the item to check for image
+      const section = sections.find((s) => s.id === sectionId)
+      const item = section?.items?.find((i) => i.id === itemId)
+
+      const { error: delErr } = await supabase
+        .from('drill_items')
+        .delete()
+        .eq('id', itemId)
+        .eq('user_id', userId)
+
+      if (delErr) throw delErr
+
+      // Delete image from storage if exists
+      if (item?.image_url) {
+        const path = `${userId}/${itemId}.${item.image_url.split('.').pop()}`
+        await supabase.storage.from('drill-images').remove([path])
+      }
+
+      // Update local state
+      setSections((prev) =>
+        prev.map((s) =>
+          s.id === sectionId
+            ? { ...s, items: s.items.filter((i) => i.id !== itemId) }
+            : s
+        )
+      )
+
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err.message || String(err) }
+    }
+  }, [userId, sections])
+
+  const refetch = useCallback(() => {
+    setLoading(true)
+    setError(null)
+    load()
+  }, [load])
+
+  return { sections, loading, error, addItem, deleteItem, refetch }
 }

@@ -185,6 +185,9 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
             </span>
           )}
 
+          {current.image_url && (
+            <img src={current.image_url} alt="" className="max-h-48 mx-auto rounded-lg mb-3 object-contain" />
+          )}
           <p className="text-lg font-medium text-gray-800 leading-relaxed">{current.text}</p>
 
           {currentIsDone && (

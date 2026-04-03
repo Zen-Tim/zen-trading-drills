@@ -1,7 +1,7 @@
 import ProgressBar from './ProgressBar'
 import { SessionTimer } from './Timer'
 
-export default function SectionPicker({ sections, sectionProgress, totalDone, totalReps, totalItems, streak, onSelectSection, sessionSeconds, getRepCount, getUniqueCount, savedSession, savedSectionObj, onResume, onStartFresh, }) {
+export default function SectionPicker({ sections, sectionProgress, totalDone, totalReps, totalItems, streak, onSelectSection, sessionSeconds, getRepCount, getUniqueCount, savedSession, savedSectionObj, onResume, onStartFresh, onAddItem }) {
   return (
     <div className="min-h-screen bg-white px-4 pt-6 pb-12 max-w-lg mx-auto">
       {/* Header */}
@@ -83,15 +83,27 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
             <button
               key={section.id}
               onClick={() => onSelectSection(section)}
-              className={`text-left p-5 rounded-2xl border transition-all active:scale-[0.97] min-h-[120px]
+              className={`relative text-left p-5 rounded-2xl border transition-all active:scale-[0.97] min-h-[120px]
                 ${complete
                   ? 'border-emerald-200 bg-emerald-50/50'
                   : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}
             >
+              {/* Add item button */}
+              {onAddItem && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); onAddItem(section.id) }}
+                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 active:bg-gray-300 transition-colors cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </span>
+              )}
               <div className="text-2xl mb-2">{section.icon}</div>
               <div className="text-base font-medium text-gray-900 leading-tight">{section.title}</div>
               <div className="text-sm text-gray-400 mt-0.5">{section.subtitle}</div>
+              <div className="text-xs text-gray-300 mt-0.5">{section.items.length} items</div>
 
               <div className="mt-3 flex items-center gap-2">
                 <ProgressBar done={done} total={total} className="flex-1" />

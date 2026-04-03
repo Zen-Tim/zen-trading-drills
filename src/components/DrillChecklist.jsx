@@ -61,6 +61,11 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
                     )}
                   </span>
 
+                  {/* Thumbnail */}
+                  {item.image_url && (
+                    <img src={item.image_url} alt="" className="w-10 h-10 rounded-md object-cover flex-shrink-0" />
+                  )}
+
                   {/* Text */}
                   <span className={`flex-1 text-base leading-snug transition-all
                     ${done ? 'text-gray-400 line-through' : 'text-gray-800'}`}

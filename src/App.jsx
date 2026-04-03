@@ -11,6 +11,7 @@ import DrillChecklist from './components/DrillChecklist'
 import Heatmap from './components/Heatmap'
 import Analytics from './components/Analytics'
 import Auth from './components/Auth'
+import AddItemForm from './components/AddItemForm'
 import { SessionTimer } from './components/Timer'
 
 function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange }) {
@@ -168,7 +169,7 @@ function BottomNav({ view, onNavigate }) {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
-  const { sections: drillSections, loading: contentLoading, error: contentError } = useDrillContent(user)
+  const { sections: drillSections, loading: contentLoading, error: contentError, addItem, deleteItem, refetch: refetchContent } = useDrillContent(user)
   const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useSupabaseProgress(user)
 
   const totalItems = drillSections.reduce((sum, s) => sum + s.items.length, 0)
@@ -179,6 +180,7 @@ export default function App() {
   const [activeSection, setActiveSection] = useState(null)
   const [resumeState, setResumeState] = useState(null)
   const [view, setView] = useState('home')
+  const [addingToSection, setAddingToSection] = useState(null)
   const { savedSession, saveSession, clearSession, consumeSession } = useSessionResume()
   const sessionStateRef = useRef(null)
 
@@ -307,6 +309,7 @@ export default function App() {
             savedSectionObj={savedSectionObj}
             onResume={handleResume}
             onStartFresh={handleStartFresh}
+            onAddItem={(sectionId) => setAddingToSection(sectionId)}
           />
         )}
         {view === 'heatmap' && (
@@ -329,6 +332,14 @@ export default function App() {
       >
         Sign out
       </button>
+      {addingToSection && (
+        <AddItemForm
+          sectionId={addingToSection}
+          sectionTitle={drillSections.find(s => s.id === addingToSection)?.title || ''}
+          onAdd={addItem}
+          onClose={() => setAddingToSection(null)}
+        />
+      )}
     </>
   )
 }
