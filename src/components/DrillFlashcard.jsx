@@ -8,7 +8,7 @@ function formatTime(seconds) {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`
 }
 
-export default function DrillFlashcard({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds, onEditItem, isRecent }) {
+export default function DrillFlashcard({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds, onEditItem, isRecent, toggleFlag }) {
   const getSid = (item) => item.section_id || section.id
   const [index, setIndex] = useState(initialIndex || 0)
   const [, setTick] = useState(0)
@@ -201,12 +201,23 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
         <div className={`w-full p-5 rounded-2xl border text-center transition-all relative
           ${currentIsDone ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-100 bg-gray-50/30'}`}
         >
-          {/* Edit + Rep count badge */}
+          {/* Flag + Edit + Rep count badge */}
           <div className="absolute top-3 right-3 flex items-center gap-1.5">
             {currentReps > 1 && (
               <span className="text-[11px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">
                 x{currentReps}
               </span>
+            )}
+            {toggleFlag && (
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleFlag(current.id) }}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 transition-colors"
+                style={{ minWidth: 44, minHeight: 44, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg className={`w-5 h-5 ${current.flagged ? 'text-amber-500' : 'text-gray-400'}`} fill={current.flagged ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-18m0 0l2.5 1.5L8 3l2.5 1.5L13 3l2.5 1.5L18 3v12l-2.5 1.5L13 15l-2.5 1.5L8 15l-2.5 1.5L3 15" />
+                </svg>
+              </button>
             )}
             {onEditItem && (
               <button

@@ -187,6 +187,12 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
               <div className="text-base font-medium text-gray-900 leading-tight">{section.title}</div>
               <div className="text-sm text-gray-400 mt-0.5">{section.subtitle}</div>
               <div className="text-xs text-gray-300 mt-0.5">{section.items.length} items</div>
+              {!editMode && (() => {
+                const flaggedCount = section.items.filter((i) => i.flagged).length
+                return flaggedCount > 0 ? (
+                  <div className="text-[11px] text-amber-500 font-medium mt-0.5">{flaggedCount} flagged</div>
+                ) : null
+              })()}
 
               {!editMode && (
                 <>

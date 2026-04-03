@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ProgressBar from './ProgressBar'
 
-export default function DrillChecklist({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, onEditItem, onDeleteItem, onReorderItems, isRecent }) {
+export default function DrillChecklist({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, onEditItem, onDeleteItem, onReorderItems, isRecent, toggleFlag }) {
   const getSid = (item) => item.section_id || section.id
 
   const doneCount = items.filter((item) => isDone(getSid(item), item.id)).length
@@ -122,6 +122,18 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
                     {item.text}
                   </span>
 
+                  {/* Flag button */}
+                  {toggleFlag && (
+                    <button
+                      onClick={() => toggleFlag(item.id)}
+                      className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-colors flex-shrink-0"
+                    >
+                      <svg className={`w-4 h-4 ${item.flagged ? 'text-amber-500' : 'text-gray-400'}`} fill={item.flagged ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-18m0 0l2.5 1.5L8 3l2.5 1.5L13 3l2.5 1.5L18 3v12l-2.5 1.5L13 15l-2.5 1.5L8 15l-2.5 1.5L3 15" />
+                      </svg>
+                    </button>
+                  )}
+
                   {/* Edit button */}
                   <button
                     onClick={() => onEditItem(item)}
@@ -174,6 +186,18 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
                   >
                     {item.text}
                   </span>
+
+                  {/* Flag button */}
+                  {toggleFlag && (
+                    <span
+                      onClick={(e) => { e.stopPropagation(); toggleFlag(item.id) }}
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0"
+                    >
+                      <svg className={`w-4 h-4 ${item.flagged ? 'text-amber-500' : 'text-gray-300'}`} fill={item.flagged ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-18m0 0l2.5 1.5L8 3l2.5 1.5L13 3l2.5 1.5L18 3v12l-2.5 1.5L13 15l-2.5 1.5L8 15l-2.5 1.5L3 15" />
+                      </svg>
+                    </span>
+                  )}
 
                   {/* Rep count badge (only show x2+) */}
                   {reps > 1 && (

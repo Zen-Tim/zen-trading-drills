@@ -16,7 +16,7 @@ import EditItemForm from './components/EditItemForm'
 import SectionForm from './components/SectionForm'
 import { SessionTimer } from './components/Timer'
 
-function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange, onEditItem, onDeleteItem, onReorderItems, isRecent }) {
+function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange, onEditItem, onDeleteItem, onReorderItems, isRecent, toggleFlag }) {
   const isFlashcard = mode === 'flashcard'
 
   return (
@@ -77,6 +77,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           sessionSeconds={sessionSeconds}
           onEditItem={onEditItem}
           isRecent={isRecent}
+          toggleFlag={toggleFlag}
         />
       ) : (
         <DrillChecklist
@@ -93,15 +94,16 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           onDeleteItem={onDeleteItem}
           onReorderItems={onReorderItems}
           isRecent={isRecent}
+          toggleFlag={toggleFlag}
         />
       )}
     </div>
   )
 }
 
-function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds, resumeState, onSessionChange, onEditItem, onDeleteItem, onReorderItems, isRecent }) {
+function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds, resumeState, onSessionChange, onEditItem, onDeleteItem, onReorderItems, isRecent, toggleFlag }) {
   const [mode, setMode] = useState(resumeState?.mode || 'flashcard')
-  const { shuffled, reshuffle } = useShuffle(section.items, resumeState?.shuffleOrder)
+  const { shuffled, reshuffle } = useShuffle(section.items, resumeState?.shuffleOrder, { weighted: true })
   const initialIndex = resumeState?.index || 0
   const indexRef = useRef(initialIndex)
 
@@ -139,6 +141,7 @@ function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, get
       onDeleteItem={onDeleteItem}
       onReorderItems={onReorderItems}
       isRecent={isRecent}
+      toggleFlag={toggleFlag}
     />
   )
 }
@@ -184,7 +187,7 @@ function BottomNav({ view, onNavigate }) {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
-  const { sections: drillSections, loading: contentLoading, error: contentError, addItem, deleteItem, updateItem, reorderItems, createSection, updateSection, deleteSection, reorderSections, refetch: refetchContent } = useDrillContent(user)
+  const { sections: drillSections, loading: contentLoading, error: contentError, addItem, deleteItem, updateItem, reorderItems, createSection, updateSection, deleteSection, reorderSections, toggleFlag, updateLastDrilled, refetch: refetchContent } = useDrillContent(user)
   const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useSupabaseProgress(user)
 
   const totalItems = drillSections.reduce((sum, s) => sum + s.items.length, 0)
@@ -201,6 +204,16 @@ export default function App() {
   const [creatingSectionMode, setCreatingSectionMode] = useState(false)
   const { savedSession, saveSession, clearSession, consumeSession } = useSessionResume()
   const sessionStateRef = useRef(null)
+
+  const handleMarkDone = useCallback((sectionId, itemId) => {
+    markDone(sectionId, itemId)
+    updateLastDrilled(itemId)
+  }, [markDone, updateLastDrilled])
+
+  const handleIncrementRep = useCallback((sectionId, itemId) => {
+    incrementRep(sectionId, itemId)
+    updateLastDrilled(itemId)
+  }, [incrementRep, updateLastDrilled])
 
   // Refetch KV data when switching to activity or analytics tabs
   const handleNavigate = useCallback((newView) => {
@@ -295,9 +308,9 @@ export default function App() {
           key={activeSection.id + (resumeState ? '-resume' : '')}
           section={activeSection}
           isDone={isDone}
-          markDone={markDone}
+          markDone={handleMarkDone}
           unmarkDone={unmarkDone}
-          incrementRep={incrementRep}
+          incrementRep={handleIncrementRep}
           getRepCount={getRepCount}
           onBack={leaveSection}
           startItem={timer.startItem}
@@ -310,6 +323,7 @@ export default function App() {
           onDeleteItem={deleteItem}
           onReorderItems={reorderItems}
           isRecent={isRecent}
+          toggleFlag={toggleFlag}
         />
         {editingItem && (
           <EditItemForm

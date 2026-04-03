@@ -487,11 +487,64 @@ export function useDrillContent(user) {
     }
   }, [userId])
 
+  const toggleFlag = useCallback(async (itemId) => {
+    try {
+      // Find current flagged state
+      const item = sections.flatMap((s) => s.items).find((i) => i.id === itemId)
+      const newFlagged = !(item?.flagged)
+
+      const { error: updateErr } = await supabase
+        .from('drill_items')
+        .update({ flagged: newFlagged })
+        .eq('id', itemId)
+        .eq('user_id', userId)
+
+      if (updateErr) throw updateErr
+
+      // Update local state — flip flagged in all sections (including Recent mirror)
+      setSections((prev) =>
+        prev.map((s) => ({
+          ...s,
+          items: s.items.map((i) =>
+            i.id === itemId ? { ...i, flagged: newFlagged } : i
+          ),
+        }))
+      )
+
+      return { success: true, flagged: newFlagged }
+    } catch (err) {
+      return { success: false, error: err.message || String(err) }
+    }
+  }, [userId, sections])
+
+  const updateLastDrilled = useCallback((itemId) => {
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Fire-and-forget DB update
+    supabase
+      .from('drill_items')
+      .update({ last_drilled: today })
+      .eq('id', itemId)
+      .eq('user_id', userId)
+      .then(() => {})
+      .catch(() => {})
+
+    // Update local state — set last_drilled in all sections (including Recent mirror)
+    setSections((prev) =>
+      prev.map((s) => ({
+        ...s,
+        items: s.items.map((i) =>
+          i.id === itemId ? { ...i, last_drilled: today } : i
+        ),
+      }))
+    )
+  }, [userId])
+
   const refetch = useCallback(() => {
     setLoading(true)
     setError(null)
     load()
   }, [load])
 
-  return { sections, loading, error, addItem, deleteItem, updateItem, reorderItems, createSection, updateSection, deleteSection, reorderSections, refetch }
+  return { sections, loading, error, addItem, deleteItem, updateItem, reorderItems, createSection, updateSection, deleteSection, reorderSections, toggleFlag, updateLastDrilled, refetch }
 }

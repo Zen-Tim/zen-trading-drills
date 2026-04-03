@@ -29,6 +29,14 @@ Personal daily practice app for PA trading drills. Pick a section, shuffle items
 - Recent section (virtual, auto-populates with items added after seed)
 - Session resume (save/restore shuffle order, mode, index)
 
+## Claude Code Prompt
+
+```
+Read Zen_Drills_Project_State_v2.0_20260403.md in the repo root. Follow the Phase 4 build instructions exactly.
+```
+
+---
+
 ## What's Next — Phase 4: Smart Practice
 
 Flag weak items and weight the shuffle so they come up first. Not spaced repetition — every item still appears every session, but flagged and stale items appear early while you're fresh.
@@ -37,14 +45,11 @@ DB columns `drill_items.flagged` and `drill_items.last_drilled` already exist fr
 
 ---
 
-## Phase 4 Claude Code Prompt
-
-```
-Read the README.md and understand the current app structure. This prompt adds smart practice: flag weak items and weighted shuffle.
+## Phase 4 Build Instructions
 
 NO database changes needed — drill_items already has `flagged` and `last_drilled` columns.
 
-STEP 1: Add toggleFlag and updateLastDrilled to useDrillContent.js
+### STEP 1: Add toggleFlag and updateLastDrilled to useDrillContent.js
 
 a) toggleFlag(itemId):
    - Toggle drill_items.flagged for this item (flip true/false)
@@ -59,7 +64,7 @@ b) updateLastDrilled(itemId):
 
 Return both new functions from the hook alongside existing ones.
 
-STEP 2: Update useShuffle.js — weighted shuffle
+### STEP 2: Update useShuffle.js — weighted shuffle
 
 Change the shuffle algorithm from pure random to tiered weighted shuffle.
 
@@ -86,10 +91,11 @@ For date comparison: parse last_drilled as a date string (YYYY-MM-DD format), co
 
 The reshuffle function should also use the weighted option — so pressing New Round re-applies the tiered shuffle, not a pure random one.
 
-STEP 3: Wire updateLastDrilled into markDone flow
+### STEP 3: Wire updateLastDrilled into markDone flow
 
 In App.jsx, create wrapped versions of markDone and incrementRep that also call updateLastDrilled:
 
+```js
 const handleMarkDone = useCallback((sectionId, itemId) => {
   markDone(sectionId, itemId)
   updateLastDrilled(itemId)
@@ -99,10 +105,11 @@ const handleIncrementRep = useCallback((sectionId, itemId) => {
   incrementRep(sectionId, itemId)
   updateLastDrilled(itemId)
 }, [incrementRep, updateLastDrilled])
+```
 
 Pass handleMarkDone and handleIncrementRep as the markDone/incrementRep props to DrillSession instead of the raw ones from useSupabaseProgress. This keeps the two hooks decoupled.
 
-STEP 4: Add flag toggle to DrillFlashcard.jsx
+### STEP 4: Add flag toggle to DrillFlashcard.jsx
 
 Add a small flag button in the flashcard view. Position it in the top-right area of the card or near the edit button.
 
@@ -114,7 +121,7 @@ Add a small flag button in the flashcard view. Position it in the top-right area
 
 The component needs toggleFlag as a prop. Pass it down through App.jsx -> DrillSession -> DrillView -> DrillFlashcard.
 
-STEP 5: Add flag toggle to DrillChecklist.jsx
+### STEP 5: Add flag toggle to DrillChecklist.jsx
 
 Same flag button on each item row. Position on the right side, before edit/reorder controls.
 
@@ -123,7 +130,7 @@ Same flag button on each item row. Position on the right side, before edit/reord
 - Visible and functional in both normal and manage mode
 - Pass toggleFlag as a prop
 
-STEP 6: Add flagged count indicator to SectionPicker.jsx
+### STEP 6: Add flagged count indicator to SectionPicker.jsx
 
 On the home screen, each section tile shows a small indicator if it has flagged items.
 
@@ -132,12 +139,16 @@ On the home screen, each section tile shows a small indicator if it has flagged 
 - If count is 0: show nothing
 - Keep it subtle — small text, amber-500 colour
 
-STEP 7: Update DrillSession in App.jsx
+### STEP 7: Update DrillSession in App.jsx
 
 Change the useShuffle call:
-  const { shuffled, reshuffle } = useShuffle(section.items, resumeState?.shuffleOrder, { weighted: true })
 
-STEP 8: Do NOT change these files:
+```js
+const { shuffled, reshuffle } = useShuffle(section.items, resumeState?.shuffleOrder, { weighted: true })
+```
+
+### STEP 8: Do NOT change these files
+
 - src/data/drills.json
 - src/lib/supabase.js
 - src/hooks/useAuth.js
@@ -152,14 +163,14 @@ STEP 8: Do NOT change these files:
 - src/components/EditItemForm.jsx
 - src/components/SectionForm.jsx
 
-Summary of modified files:
+### Summary of modified files
+
 - src/hooks/useDrillContent.js (add toggleFlag, updateLastDrilled)
 - src/hooks/useShuffle.js (weighted shuffle algorithm)
 - src/App.jsx (wrap markDone/incrementRep, pass toggleFlag down, update useShuffle call)
 - src/components/DrillFlashcard.jsx (flag toggle button)
 - src/components/DrillChecklist.jsx (flag toggle button)
 - src/components/SectionPicker.jsx (flagged count indicator)
-```
 
 ---
 
@@ -189,4 +200,4 @@ Summary of modified files:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v2.0 | 20260403 | Consolidated from 15 separate docs into one. Added Phase 4 prompt. |
+| v2.0 | 20260403 | Consolidated from 15 separate docs into one. Added Phase 4 build instructions. |
