@@ -60,6 +60,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           items={shuffledItems}
           isDone={isDone}
           markDone={markDone}
+          unmarkDone={unmarkDone}
           incrementRep={incrementRep}
           getRepCount={getRepCount}
           onBack={onBack}

@@ -8,14 +8,16 @@ function formatTime(seconds) {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`
 }
 
-export default function DrillFlashcard({ section, items, isDone, markDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds }) {
+export default function DrillFlashcard({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, startItem, stopItem, getItemElapsed, initialIndex, onIndexChange, sessionSeconds }) {
   const getSid = (item) => item.section_id || section.id
   const [index, setIndex] = useState(initialIndex || 0)
   const [, setTick] = useState(0)
   const [showAgain, setShowAgain] = useState(false)
   const [plusOneKey, setPlusOneKey] = useState(0)
+  const [undoItem, setUndoItem] = useState(null)
   const touchStart = useRef(null)
   const againTimer = useRef(null)
+  const undoTimerRef = useRef(null)
 
   // Report index changes to parent for session persistence
   useEffect(() => {
@@ -46,6 +48,9 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
     }
   }, [index])
 
+  // Clear undo timer on unmount
+  useEffect(() => () => clearTimeout(undoTimerRef.current), [])
+
   function showAgainButton() {
     setShowAgain(true)
     if (againTimer.current) clearTimeout(againTimer.current)
@@ -55,6 +60,19 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
   function hideAgain() {
     setShowAgain(false)
     if (againTimer.current) clearTimeout(againTimer.current)
+  }
+
+  function showUndoToast(sectionId, itemId) {
+    setUndoItem({ sectionId, itemId })
+    clearTimeout(undoTimerRef.current)
+    undoTimerRef.current = setTimeout(() => setUndoItem(null), 3000)
+  }
+
+  function handleUndo() {
+    if (!undoItem) return
+    unmarkDone(undoItem.sectionId, undoItem.itemId)
+    setUndoItem(null)
+    clearTimeout(undoTimerRef.current)
   }
 
   function next() {
@@ -246,6 +264,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
               if (!currentIsDone) {
                 markDone(getSid(current), current.id)
                 showAgainButton()
+                showUndoToast(getSid(current), current.id)
               } else {
                 stopItem()
                 next()
@@ -272,6 +291,21 @@ export default function DrillFlashcard({ section, items, isDone, markDone, incre
           </svg>
         </button>
       </div>
+
+      {/* Undo toast */}
+      {undoItem && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <button
+            onClick={handleUndo}
+            className="flex items-center gap-2 px-5 py-3 rounded-full bg-gray-900 text-white text-sm font-medium shadow-lg active:scale-[0.97] transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4" />
+            </svg>
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   )
 }
