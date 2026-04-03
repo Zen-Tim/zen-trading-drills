@@ -1,15 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import drillsData from '../data/drills.json'
 
-function generateToken() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  let result = 'zen-'
-  for (let i = 0; i < 4; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return result
-}
-
 function getToday() {
   const d = new Date()
   const yyyy = d.getFullYear()
@@ -19,16 +10,8 @@ function getToday() {
 }
 
 function getToken() {
-  let token = localStorage.getItem('zen-drills-token')
-  if (!token) {
-    token = generateToken()
-    localStorage.setItem('zen-drills-token', token)
-  }
-  return token
-}
-
-export function setToken(newToken) {
-  localStorage.setItem('zen-drills-token', newToken)
+  localStorage.setItem('zen-drills-token', 'zen-tim')
+  return 'zen-tim'
 }
 
 // Convert old array-format progress to count-map format
