@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import drillsData from './data/drills.json'
-import { useProgress } from './hooks/useProgress'
+import { useAuth } from './hooks/useAuth'
+import { useSupabaseProgress } from './hooks/useSupabaseProgress'
 import { useShuffle } from './hooks/useShuffle'
 import { useTimer } from './hooks/useTimer'
 import { useSessionResume } from './hooks/useSessionResume'
@@ -9,6 +10,7 @@ import DrillFlashcard from './components/DrillFlashcard'
 import DrillChecklist from './components/DrillChecklist'
 import Heatmap from './components/Heatmap'
 import Analytics from './components/Analytics'
+import Auth from './components/Auth'
 import { SessionTimer } from './components/Timer'
 
 const totalItems = drillsData.sections.reduce((sum, s) => sum + s.items.length, 0)
@@ -167,7 +169,8 @@ function BottomNav({ view, onNavigate }) {
 }
 
 export default function App() {
-  const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useProgress()
+  const { user, loading: authLoading, signOut } = useAuth()
+  const { token, progress, sectionProgress, totalDone, streak, heatmap, analytics, timerData, loading, isDone, markDone, unmarkDone, incrementRep, getRepCount, getUniqueCount, date, refetch } = useSupabaseProgress(user)
 
   // Unique items done across all sections (for home progress bar)
   const uniqueDone = drillsData.sections.reduce((sum, s) => sum + getUniqueCount(s.id), 0)
@@ -239,12 +242,16 @@ export default function App() {
     }
   }, [activeSection, saveSession])
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
       </div>
     )
+  }
+
+  if (!user) {
+    return <Auth />
   }
 
   if (activeSection) {
@@ -302,6 +309,13 @@ export default function App() {
         )}
       </div>
       <BottomNav view={view} onNavigate={handleNavigate} />
+      <button
+        onClick={signOut}
+        className="fixed bottom-0 right-2 text-[10px] text-gray-300 hover:text-gray-500 transition-colors z-40 pb-1"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 4px)' }}
+      >
+        Sign out
+      </button>
     </>
   )
 }

@@ -1,8 +1,8 @@
-# Zen Drills v1.6 - 20260403
+# Zen Drills v1.7 · 20260403
 
-## Status: LIVE -- Phases 0-9 Done
+## Status: LIVE
 
-Core app with multi-rep and session resume deployed. Polish features queued (Phases 10-14). See `Zen_Drills_Build_Prompts_v2.2_20260403.md` for build prompts.
+Core app with multi-rep, session resume, and v1.7 polish fixes deployed.
 
 ---
 
@@ -50,7 +50,7 @@ zen-drills/
     backup.js              # Vercel cron: daily snapshot of KV data
   public/
     manifest.json          # PWA manifest (name, icons, theme)
-    sw.js                  # Service worker (network-first, app shell caching)
+    sw.js                  # Service worker (network-first, versioned cache)
     icon-192.png           # PWA icon (gray circle, white Z)
     icon-512.png           # PWA icon (gray circle, white Z)
   index.html
@@ -223,10 +223,10 @@ Open the app on any device. Progress syncs automatically via KV -- no setup need
 ## Views
 
 1. **Home** -- Section tiles with today's progress per section (unique items done / total), overall progress bar, streak counter, session timer visible when running. Subtle rep count shown if total reps > unique items. Resume prompt if a session was interrupted today.
-2. **Drill (Flashcard)** -- One item at a time, swipe/tap to advance, mark done button, "Again" button appears briefly after marking done, per-item timer visible, rep count badge if item done more than once
+2. **Drill (Flashcard)** -- One item at a time, swipe/tap to advance, mark done button, "Again" button appears briefly after marking done, per-item timer visible, rep count badge if item done more than once. Completion screen with "Again" button when all items done.
 3. **Drill (Checklist)** -- Full shuffled list, tap items to check off, tap completed items to add reps, rep count badge on completed items (no per-item timing in this mode)
-4. **Heatmap** -- GitHub-style calendar grid showing daily drill activity over past ~180 days, colour intensity by total rep count
-5. **Analytics** -- Section frequency breakdown, average time per item, neglected items (not drilled in 30+ days), day-of-week patterns, 30-day trend, unique coverage vs total reps
+4. **Heatmap** -- GitHub-style calendar grid showing daily drill activity over past ~180 days, colour intensity by total rep count. Live-updates when switching tabs.
+5. **Analytics** -- Section frequency breakdown, average time per item, neglected items (not drilled in 30+ days), day-of-week patterns, 30-day trend, unique coverage vs total reps. Live-updates when switching tabs.
 6. **Bottom nav** -- Fixed tab bar: Drills (home), Activity (heatmap), Analytics. Hidden during drill sessions.
 7. Toggle between flashcard/checklist modes within a section. Shuffle/reshuffle button available in both. "New Round" button available when all items in current shuffle are done.
 
@@ -241,14 +241,23 @@ Open the app on any device. Progress syncs automatically via KV -- no setup need
 
 ---
 
+## Service Worker
+
+- **Versioned cache:** Cache name includes a build timestamp (`__BUILD_TIME__` stamped by Vite plugin on each build), so every deploy gets a unique cache.
+- **Network-first:** All GET requests try network first, fall back to cache only when offline.
+- **Aggressive update:** On activate, deletes all old caches and calls `clients.claim()`. App polls for SW updates every 30s, auto-skips waiting, and reloads on controller change -- no user prompt.
+- **No pre-caching:** App shell is not pre-cached at install time to avoid stale assets.
+
+---
+
 ## Decisions Locked
 
-1. **Design:** Clean minimal light theme, mobile-first
-2. **PWA:** Yes -- installable on phone home screen, network-first service worker
+1. **Design:** Clean minimal light theme, mobile-first, generous touch targets (56px buttons)
+2. **PWA:** Yes -- installable on phone home screen, network-first service worker with versioned cache
 3. **Item data:** Text only, no metadata
 4. **Timer:** Session timer (auto on section enter/leave) + per-item stopwatch (card mode only)
 5. **History:** GitHub-style calendar heatmap showing drill activity by day
-6. **Analytics:** Full dashboard -- section frequency, per-item time patterns, neglected items, day-of-week, trends
+6. **Analytics:** Full dashboard -- section frequency, per-item time patterns, neglected items, day-of-week, trends. Live-updates on tab switch.
 7. **Drill lifecycle:** Items never retire -- repetition is the point
 8. **Day reset:** Midnight local time (automatic)
 9. **Offline:** Online-only (simple, may lose progress if no connection)
@@ -272,3 +281,4 @@ Open the app on any device. Progress syncs automatically via KV -- no setup need
 | v1.4 | 20260402 | BUILD COMPLETE (Phases 0-6). Timer fix: session timer pauses on home, per-item timer card mode only. |
 | v1.5 | 20260403 | Multi-rep system (Phases 7-8): count map data model, "Drill Again", "New Round", rep badges. Session resume (Phase 9). Token hotfix: hardcoded to zen-tim, killed token UI. |
 | v1.6 | 20260403 | README cleanup: updated status, fixed multi-device section for post-hotfix reality, added useSessionResume to repo structure, added session resume and auth decisions. |
+| v1.7 | 20260403 | Polish fixes: enlarged all touch targets to 56px, "Again" button always visible on section completion, Activity/Analytics live-update on tab switch, service worker versioned cache with auto-reload on deploy. Removed build/fix prompt files from repo. |
