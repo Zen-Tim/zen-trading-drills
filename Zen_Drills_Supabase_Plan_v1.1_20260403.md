@@ -12,7 +12,51 @@ Replacing Vercel KV (the thing that keeps losing your data) with Supabase (a pro
 
 ---
 
-## The Steps
+## Status
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Add Supabase through Vercel | DONE |
+| 2 | Open Supabase Dashboard | DONE |
+| 3 | Set up Google Sign-In (Google Cloud Console + Supabase provider) | DONE |
+| 4 | Create database tables (SQL Editor) | DONE |
+| 5 | Check environment variables | DONE (auto-injected by Vercel) |
+| 6 | Tell Claude it's done | DONE |
+| 7 | Claude Code prompt (build Supabase integration) | DONE — code built, compiles |
+| 8 | Test together | NEXT — push to Vercel, test Google sign-in in browser first |
+| 9 | Clean up (remove old KV code) | After testing |
+
+## What Happened
+
+- Supabase project created via Vercel marketplace (project ID: fcmitqpkhdsjdeavdnvy, Tokyo region, free plan)
+- Env vars auto-injected: VITE_SUPABASE_SUPABASE_URL, VITE_SUPABASE_SUPABASE_PUBLISHABLE_KEY (double SUPABASE is correct)
+- Tables created: drill_progress, drill_heatmap, drill_streak with RLS policies
+- Google OAuth configured: Client ID in Google Cloud Console + Supabase Auth provider enabled
+- Supabase URL Configuration: Site URL = https://zen-trading-drills.vercel.app, Redirect URL = https://zen-trading-drills.vercel.app/**
+- Google Authorized JavaScript Origin: https://zen-trading-drills.vercel.app
+- Google Authorized Redirect URI: https://fcmitqpkhdsjdeavdnvy.supabase.co/auth/v1/callback
+- Claude Code built the integration (Zen_Drills_Supabase_Build_v1.0_20260403.md): 4 new files, 2 modified, compiles clean
+
+## What's Next
+
+1. Review changes in GitHub Desktop and push to main
+2. Wait for Vercel deploy (~30 seconds)
+3. Open https://zen-trading-drills.vercel.app in browser (NOT home screen icon)
+4. Test Google sign-in
+5. If sign-in works: drill a few items, close browser, reopen, check progress persists
+6. If that works: test on phone browser, then home screen icon
+7. Once confirmed working: clean up old KV code
+
+## Key Technical Details
+
+- Old KV code is still in the repo (useProgress.js, api/progress.js, api/backup.js) — untouched as fallback
+- New Supabase code: src/lib/supabase.js, src/hooks/useAuth.js, src/hooks/useSupabaseProgress.js, src/components/Auth.jsx
+- App.jsx modified to use auth gate + useSupabaseProgress instead of useProgress
+- Progress writes are per-row upserts (not blob overwrites) — one bad write cannot destroy other data
+
+---
+
+## The Steps (Reference)
 
 ### STEP 1 — You: Add Supabase Through Vercel (5 mins)
 
@@ -217,4 +261,4 @@ Once everything works:
 | Version | Date | Changes |
 |---------|------|---------|
 | v1.0 | 20260403 | Initial Supabase plan — 10 steps via separate Supabase account |
-| v1.1 | 20260403 | Simplified: create Supabase through Vercel marketplace instead of separate account. Removed manual env var steps. Cut from 10 steps to 9. |
+| v1.1 | 20260403 | Simplified: create Supabase through Vercel marketplace instead of separate account. Removed manual env var steps. Cut from 10 steps to 9. Added status table and session handoff notes after Steps 1-7 completed. |
