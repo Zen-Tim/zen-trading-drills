@@ -9,6 +9,7 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
 
   const [lastAction, setLastAction] = useState(null)
   const [manage, setManage] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState(null)
   const undoTimerRef = useRef(null)
 
   useEffect(() => () => clearTimeout(undoTimerRef.current), [])
@@ -177,11 +178,16 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
 
                   {/* Thumbnail */}
                   {item.image_url && (
-                    <img src={item.image_url} alt="" className="w-10 h-10 rounded-md object-cover flex-shrink-0" />
+                    <img
+                      src={item.image_url}
+                      alt=""
+                      className="w-10 h-10 rounded-md object-cover flex-shrink-0 cursor-pointer active:opacity-80 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); setLightboxUrl(item.image_url) }}
+                    />
                   )}
 
                   {/* Text */}
-                  <span className={`flex-1 text-base leading-snug transition-all
+                  <span className={`flex-1 text-base leading-snug transition-all whitespace-pre-wrap
                     ${done ? 'text-gray-400 line-through' : 'text-gray-800'}`}
                   >
                     {item.text}
@@ -240,6 +246,27 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
             </svg>
             Undo
           </button>
+        </div>
+      )}
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-xl hover:bg-white/20 transition-colors"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
+            x
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

@@ -15,6 +15,7 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
   const [showAgain, setShowAgain] = useState(false)
   const [plusOneKey, setPlusOneKey] = useState(0)
   const [undoItem, setUndoItem] = useState(null)
+  const [lightboxUrl, setLightboxUrl] = useState(null)
   const touchStart = useRef(null)
   const againTimer = useRef(null)
   const undoTimerRef = useRef(null)
@@ -23,6 +24,9 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
   useEffect(() => {
     onIndexChange?.(index)
   }, [index, onIndexChange])
+
+  // Close lightbox when card changes
+  useEffect(() => { setLightboxUrl(null) }, [index])
 
   const current = items[index]
   const doneCount = items.filter((item) => isDone(getSid(item), item.id)).length
@@ -232,9 +236,14 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
           </div>
 
           {current.image_url && (
-            <img src={current.image_url} alt="" className="max-h-48 mx-auto rounded-lg mb-3 object-contain" />
+            <img
+              src={current.image_url}
+              alt=""
+              className="max-h-48 mx-auto rounded-lg mb-3 object-contain cursor-pointer active:opacity-80 transition-opacity"
+              onClick={(e) => { e.stopPropagation(); setLightboxUrl(current.image_url) }}
+            />
           )}
-          <p className="text-lg font-medium text-gray-800 leading-relaxed">{current.text}</p>
+          <p className="text-lg font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">{current.text}</p>
 
           {currentIsDone && (
             <span className="inline-block mt-2 text-xs font-medium text-emerald-500 uppercase tracking-wide">Done</span>
@@ -333,6 +342,27 @@ export default function DrillFlashcard({ section, items, isDone, markDone, unmar
             </svg>
             Undo
           </button>
+        </div>
+      )}
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-xl hover:bg-white/20 transition-colors"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
+            x
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
