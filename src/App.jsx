@@ -196,6 +196,16 @@ export default function App() {
   const uniqueDone = drillSections.reduce((sum, s) => sum + getUniqueCount(s.id), 0)
   const timer = useTimer(token)
   const [activeSection, setActiveSection] = useState(null)
+
+  // Keep activeSection in sync when drillSections updates (e.g. after item edit)
+  useEffect(() => {
+    if (!activeSection) return
+    const updated = drillSections.find((s) => s.id === activeSection.id)
+    if (updated && updated !== activeSection) {
+      setActiveSection(updated)
+    }
+  }, [drillSections, activeSection])
+
   const [resumeState, setResumeState] = useState(null)
   const [view, setView] = useState('home')
   const [addingToSection, setAddingToSection] = useState(null)

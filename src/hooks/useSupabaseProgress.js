@@ -13,6 +13,7 @@ export function useSupabaseProgress(user) {
   const [progress, setProgress] = useState({})
   const [streak, setStreak] = useState({ current: 0, lastDate: null })
   const [heatmap, setHeatmap] = useState({})
+  const [sectionCounts, setSectionCounts] = useState({})
   const [loading, setLoading] = useState(true)
 
   const date = getToday()
@@ -71,6 +72,20 @@ export function useSupabaseProgress(user) {
           }
         }
         setHeatmap(heatmapData)
+
+        // Load analytics: section frequency across all dates
+        const { data: allProgressRows } = await supabase
+          .from('drill_progress')
+          .select('section_id, rep_count')
+          .eq('user_id', userId)
+
+        const counts = {}
+        if (allProgressRows) {
+          for (const row of allProgressRows) {
+            counts[row.section_id] = (counts[row.section_id] || 0) + row.rep_count
+          }
+        }
+        setSectionCounts(counts)
       } catch (err) {
         console.error('Failed to load Supabase progress:', err)
       } finally {
@@ -296,7 +311,7 @@ export function useSupabaseProgress(user) {
   const refetch = useCallback(async () => {
     if (!userId) return
     try {
-      const [streakRes, heatmapRes] = await Promise.all([
+      const [streakRes, heatmapRes, analyticsRes] = await Promise.all([
         supabase
           .from('drill_streak')
           .select('current_streak, last_date')
@@ -307,6 +322,10 @@ export function useSupabaseProgress(user) {
           .select('drill_date, total_reps')
           .eq('user_id', userId)
           .order('drill_date'),
+        supabase
+          .from('drill_progress')
+          .select('section_id, rep_count')
+          .eq('user_id', userId),
       ])
 
       if (streakRes.data) {
@@ -320,6 +339,14 @@ export function useSupabaseProgress(user) {
         }
         setHeatmap(heatmapData)
       }
+
+      if (analyticsRes.data) {
+        const counts = {}
+        for (const row of analyticsRes.data) {
+          counts[row.section_id] = (counts[row.section_id] || 0) + row.rep_count
+        }
+        setSectionCounts(counts)
+      }
     } catch (err) {
       console.error('Failed to refetch Supabase data:', err)
     }
@@ -330,7 +357,7 @@ export function useSupabaseProgress(user) {
     progress,
     streak,
     heatmap,
-    analytics: { sectionCounts: {}, itemLastDrilled: {} },
+    analytics: { sectionCounts, itemLastDrilled: {} },
     timerData: { sessionSeconds: 0, items: {} },
     loading,
     markDone,

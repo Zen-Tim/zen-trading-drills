@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 function fisherYates(array) {
   const copy = [...array]
@@ -65,6 +65,22 @@ export function useShuffle(items, initialOrder, options = {}) {
     }
     return weighted ? weightedShuffle(items) : fisherYates(items)
   })
+
+  // Sync item data (text, image_url, flagged, etc.) without changing shuffle order
+  useEffect(() => {
+    setShuffled((prev) => {
+      const itemMap = new Map(items.map((item) => [item.id, item]))
+      const updated = prev.map((old) => {
+        const fresh = itemMap.get(old.id)
+        return fresh || old
+      })
+      // If items were added or removed, do a full reshuffle
+      if (updated.length !== items.length) {
+        return weighted ? weightedShuffle(items) : fisherYates(items)
+      }
+      return updated
+    })
+  }, [items])
 
   const reshuffle = useCallback(() => {
     setShuffled(weighted ? weightedShuffle(items) : fisherYates(items))

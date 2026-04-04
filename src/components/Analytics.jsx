@@ -46,20 +46,19 @@ export default function Analytics({ sections, heatmap, analytics, timerData }) {
 
   const neglectedItems = useMemo(() => {
     const today = new Date()
-    const thirtyDaysAgo = dateToStr(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30))
-    const lastDrilled = analytics.itemLastDrilled || {}
+    const thirtyDaysAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30)
 
     const allItems = []
     for (const section of sections) {
       for (const item of section.items) {
-        const last = lastDrilled[item.id]
-        if (!last || last < thirtyDaysAgo) {
+        const lastDate = item.last_drilled ? new Date(item.last_drilled + 'T00:00:00') : null
+        if (!lastDate || lastDate < thirtyDaysAgo) {
           allItems.push({
             id: item.id,
             text: item.text,
             sectionIcon: section.icon,
             sectionTitle: section.title,
-            lastDate: last || null,
+            lastDate: item.last_drilled || null,
           })
         }
       }
@@ -70,7 +69,7 @@ export default function Analytics({ sections, heatmap, analytics, timerData }) {
       if (!b.lastDate) return 1
       return a.lastDate.localeCompare(b.lastDate)
     })
-  }, [sections, analytics])
+  }, [sections])
 
   const dayOfWeek = useMemo(() => {
     const counts = [0, 0, 0, 0, 0, 0, 0]
@@ -197,6 +196,9 @@ function formatSeconds(s) {
 }
 
 function formatDateStrShort(s) {
-  const d = strToDate(s)
+  // Handle both YYYYMMDD and YYYY-MM-DD formats
+  const d = s.includes('-')
+    ? new Date(s + 'T00:00:00')
+    : new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8))
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
