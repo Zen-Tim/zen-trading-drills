@@ -118,9 +118,18 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
       <div className="grid grid-cols-2 gap-3">
         {sections.map((section) => {
           const isRecent = section.id === 'recent'
-          const { done, total } = sectionProgress(section.id, section.items.length)
+
+          // For Recent, check each item against its real section_id
+          const done = isRecent
+            ? section.items.filter((item) => getRepCount(item.section_id, item.id) >= 1).length
+            : sectionProgress(section.id, section.items.length).done
+          const total = section.items.length
+
           const complete = done === total && total > 0
-          const sectionReps = section.items.reduce((sum, item) => sum + getRepCount(section.id, item.id), 0)
+          const sectionReps = section.items.reduce(
+            (sum, item) => sum + getRepCount(isRecent ? item.section_id : section.id, item.id),
+            0
+          )
 
           const realIdx = realSections.findIndex((s) => s.id === section.id)
           const isFirst = realIdx === 0
