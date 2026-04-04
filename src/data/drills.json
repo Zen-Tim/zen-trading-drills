@@ -2,6 +2,30 @@
   "migrations": {},
   "sections": [
     {
+      "id": "strategies",
+      "title": "Strategies",
+      "subtitle": "Session Strategies",
+      "icon": "🎯",
+      "items": [
+        { "id": "strategies-001", "text": "Open in YD Range - Go for YDH or YDL" },
+        { "id": "strategies-002", "text": "Open >< YD Range - Go for YDH or YDL" },
+        { "id": "strategies-003", "text": "Gap on Open - Gap Close" },
+        { "id": "strategies-004", "text": "CSC 60m Bars - bet on that kind of day" },
+        { "id": "strategies-005", "text": "Gap open - go for MA or wait for MA" },
+        { "id": "strategies-006", "text": "Trend from open - entry strategies" },
+        { "id": "strategies-007", "text": "Close of Last Week" },
+        { "id": "strategies-008", "text": "Volatility YD - Impact today" },
+        { "id": "strategies-009", "text": "ABR from the close" },
+        { "id": "strategies-010", "text": "18 Bar Range - Size vs ADR, 1/2, 3/4, 1x range expansion" },
+        { "id": "strategies-011", "text": "1st / last month/quarter/year" },
+        { "id": "strategies-012", "text": "OOH / OOL" },
+        { "id": "strategies-013", "text": "Bar 1 strategies" },
+        { "id": "strategies-014", "text": "MMYD" },
+        { "id": "strategies-015", "text": "CSC 15m bars" },
+        { "id": "strategies-016", "text": "Pre-market breakout" }
+      ]
+    },
+    {
       "id": "classic",
       "title": "Al Brooks Classic",
       "subtitle": "Classic PA Daily Review",
