@@ -16,7 +16,7 @@ import EditItemForm from './components/EditItemForm'
 import SectionForm from './components/SectionForm'
 import { SessionTimer } from './components/Timer'
 
-function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange, onEditItem, onDeleteItem, onReorderItems, isRecent, toggleFlag }) {
+function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onReshuffle, onNewRound, shuffledItems, stopItem, startItem, getItemElapsed, sessionSeconds, initialIndex, onIndexChange, onEditItem, onDeleteItem, onReorderItems, isVirtual, toggleFlag }) {
   const isFlashcard = mode === 'flashcard'
 
   return (
@@ -44,7 +44,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
 
         <SessionTimer seconds={sessionSeconds} />
 
-        {!isRecent && (
+        {!isVirtual && (
           <button
             onClick={onNewRound}
             className="ml-auto px-4 min-h-[48px] flex items-center gap-1.5 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-500"
@@ -76,7 +76,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           onIndexChange={onIndexChange}
           sessionSeconds={sessionSeconds}
           onEditItem={onEditItem}
-          isRecent={isRecent}
+          isVirtual={isVirtual}
           toggleFlag={toggleFlag}
         />
       ) : (
@@ -93,7 +93,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
           onReorderItems={onReorderItems}
-          isRecent={isRecent}
+          isVirtual={isVirtual}
           toggleFlag={toggleFlag}
         />
       )}
@@ -101,7 +101,7 @@ function DrillView({ section, mode, setMode, isDone, markDone, unmarkDone, incre
   )
 }
 
-function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds, resumeState, onSessionChange, onEditItem, onDeleteItem, onReorderItems, isRecent, toggleFlag }) {
+function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, startItem, stopItem, getItemElapsed, sessionSeconds, resumeState, onSessionChange, onEditItem, onDeleteItem, onReorderItems, isVirtual, toggleFlag }) {
   const [mode, setMode] = useState(resumeState?.mode || 'flashcard')
   const { shuffled, reshuffle } = useShuffle(section.items, resumeState?.shuffleOrder, { weighted: true })
   const initialIndex = resumeState?.index || 0
@@ -140,7 +140,7 @@ function DrillSession({ section, isDone, markDone, unmarkDone, incrementRep, get
       onEditItem={onEditItem}
       onDeleteItem={onDeleteItem}
       onReorderItems={onReorderItems}
-      isRecent={isRecent}
+      isVirtual={isVirtual}
       toggleFlag={toggleFlag}
     />
   )
@@ -311,7 +311,7 @@ export default function App() {
   }
 
   if (activeSection) {
-    const isRecent = activeSection.id === 'recent'
+    const isVirtual = activeSection.id === 'recent' || activeSection.id === 'neglected'
     return (
       <>
         <DrillSession
@@ -332,7 +332,7 @@ export default function App() {
           onEditItem={(item) => setEditingItem(item)}
           onDeleteItem={deleteItem}
           onReorderItems={reorderItems}
-          isRecent={isRecent}
+          isVirtual={isVirtual}
           toggleFlag={toggleFlag}
         />
         {editingItem && (

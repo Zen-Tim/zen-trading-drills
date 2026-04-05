@@ -6,7 +6,7 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
   const [editMode, setEditMode] = useState(false)
 
   // Get real (non-recent) sections for reorder logic
-  const realSections = sections.filter((s) => s.id !== 'recent')
+  const realSections = sections.filter((s) => s.id !== 'recent' && s.id !== 'neglected')
 
   function handleMoveUp(sectionId) {
     const idx = realSections.findIndex((s) => s.id === sectionId)
@@ -25,7 +25,7 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
   }
 
   function handleTileClick(section) {
-    if (editMode && section.id !== 'recent') {
+    if (editMode && section.id !== 'recent' && section.id !== 'neglected') {
       onEditSection(section)
     } else {
       onSelectSection(section)
@@ -117,17 +117,17 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
       {/* Section grid */}
       <div className="grid grid-cols-2 gap-3">
         {sections.map((section) => {
-          const isRecent = section.id === 'recent'
+          const isVirtual = section.id === 'recent' || section.id === 'neglected'
 
-          // For Recent, check each item against its real section_id
-          const done = isRecent
+          // For virtual sections, check each item against its real section_id
+          const done = isVirtual
             ? section.items.filter((item) => getRepCount(item.section_id, item.id) >= 1).length
             : sectionProgress(section.id, section.items.length).done
           const total = section.items.length
 
           const complete = done === total && total > 0
           const sectionReps = section.items.reduce(
-            (sum, item) => sum + getRepCount(isRecent ? item.section_id : section.id, item.id),
+            (sum, item) => sum + getRepCount(isVirtual ? item.section_id : section.id, item.id),
             0
           )
 
@@ -142,13 +142,13 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
               className={`relative text-left p-5 rounded-2xl border transition-all active:scale-[0.97] min-h-[120px]
                 ${complete && !editMode
                   ? 'border-emerald-200 bg-emerald-50/50'
-                  : editMode && !isRecent
+                  : editMode && !isVirtual
                     ? 'border-gray-200 bg-gray-50/50'
                     : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}
             >
-              {/* Edit mode: pencil icon (not on Recent) */}
-              {editMode && !isRecent && (
+              {/* Edit mode: pencil icon (not on virtual sections) */}
+              {editMode && !isVirtual && (
                 <span className="absolute top-3 left-3 w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -156,8 +156,8 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
                 </span>
               )}
 
-              {/* Edit mode: reorder arrows (not on Recent) */}
-              {editMode && !isRecent && (
+              {/* Edit mode: reorder arrows (not on virtual sections) */}
+              {editMode && !isVirtual && (
                 <div className="absolute top-3 right-3 flex flex-col gap-0.5">
                   <span
                     onClick={(e) => { e.stopPropagation(); handleMoveUp(section.id) }}
@@ -180,8 +180,8 @@ export default function SectionPicker({ sections, sectionProgress, totalDone, to
                 </div>
               )}
 
-              {/* Add item button (normal mode only, not edit mode) */}
-              {!editMode && onAddItem && (
+              {/* Add item button (normal mode only, not on virtual sections) */}
+              {!editMode && onAddItem && !isVirtual && (
                 <span
                   onClick={(e) => { e.stopPropagation(); onAddItem(section.id) }}
                   className="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 active:bg-gray-300 transition-colors cursor-pointer"

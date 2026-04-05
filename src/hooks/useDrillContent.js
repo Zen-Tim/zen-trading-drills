@@ -118,6 +118,41 @@ export function useDrillContent(user) {
         }
       }
 
+      // Build virtual "Neglected" section
+      const NEGLECTED_DAYS = 30
+      const neglectedCutoff = new Date()
+      neglectedCutoff.setHours(0, 0, 0, 0)
+      neglectedCutoff.setDate(neglectedCutoff.getDate() - NEGLECTED_DAYS)
+
+      const neglectedItems = []
+      for (const section of assembled.filter(s => s.id !== 'recent')) {
+        for (const item of section.items) {
+          const lastDate = item.last_drilled ? new Date(item.last_drilled + 'T00:00:00') : null
+          if (!lastDate || lastDate < neglectedCutoff) {
+            neglectedItems.push({ ...item })
+          }
+        }
+      }
+
+      neglectedItems.sort((a, b) => {
+        if (!a.last_drilled && !b.last_drilled) return 0
+        if (!a.last_drilled) return -1
+        if (!b.last_drilled) return 1
+        return a.last_drilled.localeCompare(b.last_drilled)
+      })
+
+      if (neglectedItems.length > 0) {
+        const insertIndex = assembled.length > 0 && assembled[0].id === 'recent' ? 1 : 0
+        assembled.splice(insertIndex, 0, {
+          id: 'neglected',
+          title: 'Neglected',
+          subtitle: 'Not drilled in 30+ days',
+          icon: '\u{1F6A9}',
+          sort_order: -2,
+          items: neglectedItems,
+        })
+      }
+
       setSections(assembled)
       setLoading(false)
     } catch (err) {
@@ -215,15 +250,15 @@ export function useDrillContent(user) {
         .eq('user_id', userId)
         .eq('item_id', itemId)
 
-      // Update local state — remove from real section and from Recent
+      // Update local state — remove from real section and from virtual sections
       setSections((prev) =>
         prev
           .map((s) =>
-            s.id === sectionId || s.id === 'recent'
+            s.id === sectionId || s.id === 'recent' || s.id === 'neglected'
               ? { ...s, items: s.items.filter((i) => i.id !== itemId) }
               : s
           )
-          .filter((s) => s.id !== 'recent' || s.items.length > 0)
+          .filter((s) => (s.id !== 'recent' && s.id !== 'neglected') || s.items.length > 0)
       )
 
       return { success: true }
@@ -334,9 +369,9 @@ export function useDrillContent(user) {
       const slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
       const id = slug + '-' + Date.now()
 
-      // Find max sort_order (excluding Recent which is -1)
+      // Find max sort_order (excluding virtual sections)
       const maxOrder = sections
-        .filter((s) => s.id !== 'recent')
+        .filter((s) => s.id !== 'recent' && s.id !== 'neglected')
         .reduce((max, s) => Math.max(max, s.sort_order), -1)
 
       const newSection = {
@@ -357,11 +392,9 @@ export function useDrillContent(user) {
       const sectionWithItems = { ...newSection, items: [] }
 
       setSections((prev) => {
-        const hasRecent = prev.length > 0 && prev[0].id === 'recent'
-        if (hasRecent) {
-          return [prev[0], ...prev.slice(1), sectionWithItems]
-        }
-        return [...prev, sectionWithItems]
+        // Insert new section after virtual sections (Recent, Neglected)
+        const virtualCount = prev.filter((s) => s.id === 'recent' || s.id === 'neglected').length
+        return [...prev.slice(0, virtualCount), ...prev.slice(virtualCount), sectionWithItems]
       })
 
       return { success: true, section: sectionWithItems }
@@ -371,7 +404,7 @@ export function useDrillContent(user) {
   }, [userId, sections])
 
   const updateSection = useCallback(async (sectionId, updates) => {
-    if (sectionId === 'recent') return { success: true }
+    if (sectionId === 'recent' || sectionId === 'neglected') return { success: true }
 
     try {
       const { error: updateErr } = await supabase
@@ -395,7 +428,7 @@ export function useDrillContent(user) {
   }, [userId])
 
   const deleteSection = useCallback(async (sectionId) => {
-    if (sectionId === 'recent') return { success: true }
+    if (sectionId === 'recent' || sectionId === 'neglected') return { success: true }
 
     try {
       // Get all items in this section from local state
@@ -433,16 +466,16 @@ export function useDrillContent(user) {
 
       if (delErr) throw delErr
 
-      // Update local state — remove section and clean Recent of items from this section
+      // Update local state — remove section and clean virtual sections of items from this section
       setSections((prev) =>
         prev
           .filter((s) => s.id !== sectionId)
           .map((s) => {
-            if (s.id !== 'recent') return s
+            if (s.id !== 'recent' && s.id !== 'neglected') return s
             const filtered = s.items.filter((i) => i.section_id !== sectionId)
             return { ...s, items: filtered }
           })
-          .filter((s) => s.id !== 'recent' || s.items.length > 0)
+          .filter((s) => (s.id !== 'recent' && s.id !== 'neglected') || s.items.length > 0)
       )
 
       return { success: true }
@@ -453,8 +486,8 @@ export function useDrillContent(user) {
 
   const reorderSections = useCallback(async (orderedSectionIds) => {
     try {
-      // Filter out 'recent' — it's virtual
-      const realIds = orderedSectionIds.filter((id) => id !== 'recent')
+      // Filter out virtual sections
+      const realIds = orderedSectionIds.filter((id) => id !== 'recent' && id !== 'neglected')
 
       // Update all sections in parallel
       await Promise.all(
@@ -469,8 +502,7 @@ export function useDrillContent(user) {
 
       // Update local state
       setSections((prev) => {
-        const hasRecent = prev.length > 0 && prev[0].id === 'recent'
-        const recentSection = hasRecent ? prev[0] : null
+        const virtualSections = prev.filter((s) => s.id === 'recent' || s.id === 'neglected')
         const sectionMap = new Map(prev.map((s) => [s.id, s]))
         const reordered = realIds
           .map((id, index) => {
@@ -478,7 +510,7 @@ export function useDrillContent(user) {
             return s ? { ...s, sort_order: index } : null
           })
           .filter(Boolean)
-        return recentSection ? [recentSection, ...reordered] : reordered
+        return [...virtualSections, ...reordered]
       })
 
       return { success: true }

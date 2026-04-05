@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ProgressBar from './ProgressBar'
 
-export default function DrillChecklist({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, onEditItem, onDeleteItem, onReorderItems, isRecent, toggleFlag }) {
+export default function DrillChecklist({ section, items, isDone, markDone, unmarkDone, incrementRep, getRepCount, onBack, onNewRound, onEditItem, onDeleteItem, onReorderItems, isVirtual, toggleFlag }) {
   const getSid = (item) => item.section_id || section.id
 
   const doneCount = items.filter((item) => isDone(getSid(item), item.id)).length
@@ -36,14 +36,14 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
   }
 
   function handleMoveUp(index) {
-    if (index === 0 || isRecent) return
+    if (index === 0 || isVirtual) return
     const ids = items.map((i) => i.id)
     ;[ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]
     onReorderItems(section.id, ids)
   }
 
   function handleMoveDown(index) {
-    if (index === items.length - 1 || isRecent) return
+    if (index === items.length - 1 || isVirtual) return
     const ids = items.map((i) => i.id)
     ;[ids[index], ids[index + 1]] = [ids[index + 1], ids[index]]
     onReorderItems(section.id, ids)
@@ -95,7 +95,7 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
               return (
                 <li key={item.id} className="flex items-center gap-2 px-2 py-2 rounded-xl bg-gray-50">
                   {/* Reorder buttons */}
-                  {!isRecent && (
+                  {!isVirtual && (
                     <div className="flex flex-col gap-0.5 flex-shrink-0">
                       <button
                         onClick={() => handleMoveUp(idx)}
@@ -218,7 +218,7 @@ export default function DrillChecklist({ section, items, isDone, markDone, unmar
         </ul>
 
         {/* New Round button — only in drill mode, hidden for Recent */}
-        {!manage && !isRecent && (
+        {!manage && !isVirtual && (
           <div className="mt-6 flex justify-center">
             <button
               onClick={onNewRound}

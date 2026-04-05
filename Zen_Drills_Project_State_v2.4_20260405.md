@@ -1,4 +1,4 @@
-# Zen Drills — Project State v2.3 · 20260404
+# Zen Drills — Project State v2.4 · 20260405
 
 ## What It Is
 
@@ -32,12 +32,18 @@ Personal daily practice app for PA trading drills. Pick a section, shuffle items
 - Line breaks preserved in drill text (whitespace-pre-wrap)
 - Tap-to-expand image lightbox in both flashcard and checklist modes
 
-## Repo Docs
+## Current Task — Neglected Section
 
-| File | Purpose |
-|------|---------|
-| Zen_Drills_Fixes_v1.0_20260404.md | Bug fix prompt: edit-doesn't-update, analytics empty, date format |
-| Zen_Drills_Fixes_v1.1_20260404.md | UI improvements: line break preservation, image lightbox |
+Prompt ready: `Zen_Drills_Neglected_Section_v1.0_20260405.md`
+
+Adds a virtual "Neglected" section pulling items not drilled in 30+ days (or never drilled) from across all real sections. Same pattern as Recent — items keep their original section_id for progress tracking. Also renames `isRecent` prop to `isVirtual` so both Recent and Neglected share the same behaviour.
+
+After running the prompt, delete the prompt file and this cleanup list:
+- Zen_Drills_Neglected_Section_v1.0_20260405.md
+- Zen_Drills_Fixes_v1.0_20260404.md
+- Zen_Drills_Fixes_v1.1_20260404.md
+- Zen_Drills_Fixes_v1.2_20260404.md
+- Zen_Drills_Project_State_v2.3_20260404.md
 
 ## Build History
 
@@ -48,14 +54,15 @@ Personal daily practice app for PA trading drills. Pick a section, shuffle items
 | 20260403 | Phase 1: Content tables + seed migration. Phase 2: Add items + image upload. Undo toast, Recent section, +1 Rep fix. |
 | 20260403 | Phase 3A: Item edit/delete/reorder. Phase 3B: Section create/edit/delete/reorder. |
 | 20260403 | Phase 4: Smart practice — flag toggle, weighted shuffle, last_drilled tracking, amber badges. |
-| 20260404 | Bug fixes: (1) Edit item now updates card immediately — activeSection syncs with drillSections via useEffect, useShuffle syncs item data without re-shuffling order. (2) Analytics tab wired up — sectionCounts queries drill_progress for all-time rep totals, neglected items reads last_drilled directly from drill_items. (3) Date format helper handles both YYYYMMDD and YYYY-MM-DD. |
-| 20260404 | UI improvements: whitespace-pre-wrap on drill text in both modes, tap-to-expand image lightbox in both modes. |
+| 20260404 | Bug fixes: edit-update sync, analytics wiring, date format helper. UI: line break preservation, image lightbox. |
+| 20260405 | Neglected virtual section (pending deploy). |
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | v2.0 | 20260403 | Consolidated from 15 separate docs into one. Added Phase 4 build instructions. |
-| v2.1 | 20260403 | Phase 4 complete. Removed build instructions. All phases done. |
+| v2.1 | 20260403 | Phase 4 complete. All phases done. |
 | v2.2 | 20260404 | Three bug fixes deployed: edit-update, analytics wiring, date format. |
-| v2.3 | 20260404 | Line break preservation and image lightbox in flashcard + checklist modes. |
+| v2.3 | 20260404 | Line break preservation and image lightbox. |
+| v2.4 | 20260405 | Added Neglected section prompt. Cleaned up old fix docs. |
